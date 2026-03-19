@@ -14,13 +14,17 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
-const statusData = [
-  { name: "Paid", value: 18, color: "var(--color-success)" },
-  { name: "Pending", value: 4, color: "var(--color-warning)" },
-  { name: "Late", value: 2, color: "var(--color-destructive)" },
-]
+export interface PaymentStatusData {
+  name: string
+  value: number
+  color: string
+}
 
-export function PaymentStatusChart() {
+interface PaymentStatusChartProps {
+  data: PaymentStatusData[]
+}
+
+export function PaymentStatusChart({ data }: PaymentStatusChartProps) {
   return (
     <Card className="min-w-0 overflow-hidden transition-shadow hover:shadow-md">
       <CardHeader className="pb-4">
@@ -47,7 +51,7 @@ export function PaymentStatusChart() {
         >
           <PieChart>
             <Pie
-              data={statusData}
+              data={data}
               cx="50%"
               cy="50%"
               innerRadius="35%"
@@ -73,7 +77,7 @@ export function PaymentStatusChart() {
               }}
               labelLine={false}
             >
-              {statusData.map((entry, index) => (
+              {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>

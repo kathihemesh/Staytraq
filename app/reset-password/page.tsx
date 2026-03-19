@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
-import { AuthThemeToggle } from "@/components/auth-theme-toggle"
+
+const supabase = createClient()
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -27,50 +29,63 @@ export default function ResetPasswordPage() {
   // Check if the reset token is valid on mount
   useEffect(() => {
     const checkResetToken = async () => {
-      const supabase = createClient()
-      
       try {
-        // Get the session - Supabase automatically handles the recovery token from the URL
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        // 1. Check URL Fragment for recovery token first
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const accessToken = hashParams.get("access_token")
+        const type = hashParams.get("type")
         
-        if (sessionError) {
-          setIsValidToken(false)
-          setError("This password reset link is invalid or has expired. Please request a new reset link.")
-        } else if (session) {
-          setIsValidToken(true)
-        } else {
-          // No session and no error - check URL for recovery token
-          const hashParams = new URLSearchParams(window.location.hash.substring(1))
-          const accessToken = hashParams.get("access_token")
-          const type = hashParams.get("type")
+        // 2. Get the current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        // Scenario A: URL has recovery metadata
+        if (type === "recovery" && accessToken) {
+          const { error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: hashParams.get("refresh_token") || "",
+          })
           
-          if (type === "recovery" && accessToken) {
-            // Set the session from the recovery token
-            const { error: setSessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: hashParams.get("refresh_token") || "",
-            })
-            
-            if (setSessionError) {
-              setIsValidToken(false)
-              setError("This password reset link is invalid or has expired. Please request a new reset link.")
-            } else {
-              setIsValidToken(true)
-            }
+          if (setSessionError) {
+            setIsValidToken(false)
+            setError("This password reset link is invalid or has expired.")
+          } else {
+            setIsValidToken(true)
+          }
+        } 
+        // Scenario B: User has a session (either via recovery link or fresh OTP verification)
+        else if (session) {
+          setIsValidToken(true)
+        }
+        // Scenario C: No session and no recovery token in URL
+        else if (!session && !accessToken) {
+          setIsValidToken(false)
+          setError("Access denied. Please use the reset link sent to your email.")
+        }
+        // Scenario D: Catch-all for session errors
+        else if (sessionError) {
+          setIsValidToken(false)
+          setError("Session error. Please try requesting a new reset link.")
+        }
+        else {
+          // Check if the existing session is a recovery session
+          // (Sometimes setSession was already called or persisted)
+          if (session) {
+            setIsValidToken(true)
           } else {
             setIsValidToken(false)
-            setError("This password reset link is invalid or has expired. Please request a new reset link.")
+            setError("Invalid access. Please use the reset link provided in your email.")
           }
         }
-      } catch {
+      } catch (err) {
+        console.error("Error in checkResetToken:", err)
         setIsValidToken(false)
-        setError("This password reset link is invalid or has expired. Please request a new reset link.")
+        setError("An unexpected error occurred while verifying your reset link.")
       }
       setIsCheckingToken(false)
     }
 
     checkResetToken()
-  }, [])
+  }, [router])
 
   const validatePassword = (password: string): string | null => {
     if (!password.trim()) {
@@ -120,7 +135,6 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true)
 
     try {
-      const supabase = createClient()
       const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       })
@@ -168,12 +182,13 @@ export default function ResetPasswordPage() {
             href="/login" 
             className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Building2 className="h-4 w-4 text-primary-foreground" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
+              <img src="/logo.png" alt="Staytraq Logo" className="h-full w-full object-cover" />
             </div>
-            <span className="hidden text-sm font-semibold text-foreground sm:inline">PG Rent Manager</span>
+            <span className="text-sm font-semibold text-foreground">Staytraq</span>
           </Link>
-          <AuthThemeToggle />
+
+          <ThemeToggle />
         </header>
 
         {/* Main Content */}
@@ -204,7 +219,7 @@ export default function ResetPasswordPage() {
 
         {/* Footer */}
         <footer className="py-4 text-center text-xs text-muted-foreground">
-          <p>PG Rent Manager v1.0.0</p>
+          <p>Staytraq v1.0.0</p>
         </footer>
       </div>
     )
@@ -220,12 +235,13 @@ export default function ResetPasswordPage() {
             href="/login" 
             className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Building2 className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="hidden text-sm font-semibold text-foreground sm:inline">PG Rent Manager</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
+            <img src="/logo.png" alt="Staytraq Logo" className="h-full w-full object-cover" />
+          </div>
+            <span className="text-sm font-semibold text-foreground">Staytraq</span>
           </Link>
-          <AuthThemeToggle />
+
+          <ThemeToggle />
         </header>
 
         {/* Main Content */}
@@ -256,7 +272,7 @@ export default function ResetPasswordPage() {
 
         {/* Footer */}
         <footer className="py-4 text-center text-xs text-muted-foreground">
-          <p>PG Rent Manager v1.0.0</p>
+          <p>Staytraq v1.0.0</p>
         </footer>
       </div>
     )
@@ -270,20 +286,21 @@ export default function ResetPasswordPage() {
           href="/login" 
           className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Building2 className="h-4 w-4 text-primary-foreground" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
+            <img src="/logo.png" alt="Staytraq Logo" className="h-full w-full object-cover" />
           </div>
-          <span className="hidden text-sm font-semibold text-foreground sm:inline">PG Rent Manager</span>
+          <span className="text-sm font-semibold text-foreground">Staytraq</span>
         </Link>
-        <AuthThemeToggle />
+
+        <ThemeToggle />
       </header>
 
       {/* Main Content */}
       <main className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-8">
         <Card className="w-full max-w-[420px] border-border/50 shadow-lg">
-          <CardHeader className="space-y-1 px-4 pt-6 text-center sm:px-6">
-            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-primary sm:h-12 sm:w-12">
-              <Building2 className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
+          <CardHeader className="space-y-1 text-center">
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden">
+              <img src="/logo.png" alt="Staytraq Logo" className="h-full w-full object-cover" />
             </div>
             <CardTitle className="text-xl font-bold tracking-tight sm:text-2xl">
               Reset Your Password
@@ -417,7 +434,7 @@ export default function ResetPasswordPage() {
 
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-muted-foreground">
-        <p>PG Rent Manager v1.0.0</p>
+        <p>Staytraq v1.0.0</p>
       </footer>
     </div>
   )

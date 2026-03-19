@@ -132,7 +132,7 @@
     @apply border-border outline-ring/50;
   }
   html {
-    @apply overflow-x-hidden scroll-smooth;
+    @apply scroll-smooth;
     color-scheme: light;
     /* Prevent layout shift from scrollbar appearance */
     scrollbar-gutter: stable;
@@ -141,7 +141,7 @@
     color-scheme: dark;
   }
   body {
-    @apply overflow-x-hidden bg-background text-foreground;
+    @apply bg-background text-foreground;
     transition: background-color 0.3s ease, color 0.2s ease;
     /* Prevent body padding changes from Radix UI */
     padding-right: 0 !important;

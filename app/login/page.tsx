@@ -2,28 +2,34 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Building2, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
+import { Building2, Eye, EyeOff, AlertCircle, Loader2, Phone, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/components/auth-provider"
-import { AuthThemeToggle } from "@/components/auth-theme-toggle"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
-  const [email, setEmail] = useState("")
+  const [authType, setAuthType] = useState<"phone" | "email">("phone")
+  const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [validationError, setValidationError] = useState<{ email?: string; password?: string }>({})
+  const [validationError, setValidationError] = useState<{ identifier?: string; password?: string }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { login, isLoading } = useAuth()
+  const { login, isLoading, isAuthenticated, isOnboardingKnown } = useAuth()
 
   const validateForm = () => {
-    const errors: { email?: string; password?: string } = {}
+    const errors: { identifier?: string; password?: string } = {}
     
-    if (!email.trim()) {
-      errors.email = "Email is required"
+    if (!identifier.trim()) {
+      errors.identifier = `${authType === "email" ? "Email" : "Phone number"} is required`
+    } else if (authType === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+      errors.identifier = "Please enter a valid email address"
+    } else if (authType === "phone" && !/^\d{10}$/.test(identifier.replace(/\D/g, ""))) {
+      errors.identifier = "Please enter a valid 10-digit phone number"
     }
     
     if (!password.trim()) {
@@ -44,14 +50,15 @@ export default function LoginPage() {
     
     setIsSubmitting(true)
 
-    const result = await login(email, password)
+    const result = await login(identifier, password, authType)
     
     if (!result.success) {
-      setError(result.error || "Invalid email or password. Please try again.")
+      setError(result.error || "Invalid credentials. Please try again.")
       setIsSubmitting(false)
     }
-    // If success, the auth provider will redirect to dashboard
   }
+// ... (rest of the component remains similar, but using authType for labels)
+
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -65,6 +72,21 @@ export default function LoginPage() {
     )
   }
 
+  // Prevent login form flicker during sign-in redirects.
+  // Once authenticated, the AuthProvider will redirect to onboarding/dashboard.
+  if (isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">
+            {isOnboardingKnown ? "Redirecting..." : "Signing you in..."}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-muted/30">
       {/* Header */}
@@ -73,12 +95,13 @@ export default function LoginPage() {
           href="/login" 
           className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Building2 className="h-4 w-4 text-primary-foreground" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
+            <img src="/logo.png" alt="Staytraq Logo" className="h-full w-full object-cover" />
           </div>
-          <span className="hidden text-sm font-semibold text-foreground sm:inline">PG Rent Manager</span>
+          <span className="text-sm font-semibold text-foreground">Staytraq</span>
         </Link>
-        <AuthThemeToggle />
+
+        <ThemeToggle />
       </header>
 
       {/* Main Content */}
@@ -107,80 +130,104 @@ export default function LoginPage() {
 
             {/* Form */}
             <form className="space-y-4" onSubmit={handleSubmit}>
-              {/* Email Field */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  autoComplete="email"
-                  className={`h-11 ${validationError.email ? "border-destructive" : ""}`}
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    setError(null)
-                    setValidationError((prev) => ({ ...prev, email: undefined }))
-                  }}
-                  aria-describedby={validationError.email ? "email-error" : undefined}
-                />
-                {validationError.email && (
-                  <p id="email-error" className="text-sm text-destructive">
-                    {validationError.email}
-                  </p>
-                )}
-              </div>
+              <Tabs 
+                value={authType} 
+                onValueChange={(v) => {
+                  setAuthType(v as "phone" | "email")
+                  setIdentifier("")
+                  setValidationError({})
+                  setError(null)
+                }} 
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="phone" className="gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone
+                  </TabsTrigger>
+                  <TabsTrigger value="email" className="gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Password Field */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    className={`h-11 pr-10 ${validationError.password ? "border-destructive" : ""}`}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value)
-                      setError(null)
-                      setValidationError((prev) => ({ ...prev, password: undefined }))
-                    }}
-                    aria-describedby={validationError.password ? "password-error" : undefined}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
+                <div className="mt-4 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="identifier">
+                      {authType === "phone" ? "Phone Number" : "Email Address"}
+                    </Label>
+                    <div className="relative">
+                      {authType === "phone" && (
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                          +91
+                        </div>
+                      )}
+                      <Input
+                        id="identifier"
+                        type={authType === "email" ? "email" : "tel"}
+                        placeholder={authType === "email" ? "name@example.com" : "00000 00000"}
+                        className={`h-11 ${validationError.identifier ? "border-destructive" : ""} ${authType === "phone" ? "pl-12" : ""}`}
+                        value={identifier}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setIdentifier(authType === "phone" ? value.replace(/\D/g, "").slice(0, 10) : value)
+                          setError(null)
+                          setValidationError((prev) => ({ ...prev, identifier: undefined }))
+                        }}
+                      />
+                    </div>
+                    {validationError.identifier && (
+                      <p className="text-sm text-destructive">
+                        {validationError.identifier}
+                      </p>
                     )}
-                  </button>
-                </div>
-                {validationError.password && (
-                  <p id="password-error" className="text-sm text-destructive">
-                    {validationError.password}
-                  </p>
-                )}
-                <div className="flex justify-end">
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-                  >
-                    Forgot Password?
-                  </Link>
-                </div>
-              </div>
+                  </div>
 
-              {/* Sign In Button */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                        className={`h-11 pr-10 ${validationError.password ? "border-destructive" : ""}`}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value)
+                          setError(null)
+                          setValidationError((prev) => ({ ...prev, password: undefined }))
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {validationError.password && (
+                      <p className="text-sm text-destructive">
+                        {validationError.password}
+                      </p>
+                    )}
+                    <div className="flex justify-end">
+                      <Link
+                        href="/forgot-password"
+                        className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                      >
+                        Forgot Password?
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </Tabs>
+
               <Button 
                 type="submit" 
-                className="h-11 w-full font-medium transition-all duration-200 hover:shadow-md active:scale-[0.98]"
+                className="h-11 w-full font-medium transition-all duration-200 hover:shadow-md"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -195,22 +242,33 @@ export default function LoginPage() {
             </form>
 
             {/* Footer Text */}
-            <p className="text-center text-sm text-muted-foreground">
-              {"Need help? "}
-              <button
-                type="button"
-                className="font-medium text-primary hover:text-primary/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-              >
-                Contact support
-              </button>
-            </p>
+            <div className="space-y-2">
+              <p className="text-center text-sm text-muted-foreground">
+                {"Need help? "}
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:text-primary/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                >
+                  Contact support
+                </button>
+              </p>
+              <p className="text-center text-sm text-muted-foreground">
+                {"New to Staytraq? "}
+                <Link
+                  href="/signup"
+                  className="font-medium text-primary hover:text-primary/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                >
+                  Register here
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </main>
 
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-muted-foreground">
-        <p>PG Rent Manager v1.0.0</p>
+        <p>Staytraq v1.0.0</p>
       </footer>
     </div>
   )

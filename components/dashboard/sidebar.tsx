@@ -19,7 +19,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { useState, useEffect, useId, createContext, useContext } from "react"
+import { useState, useEffect, useId } from "react"
 import { useTheme } from "next-themes"
 import {
   Tooltip,
@@ -37,16 +37,6 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings, description: "App configuration" },
 ]
 
-// Create context for sidebar collapsed state
-const SidebarContext = createContext<{
-  collapsed: boolean
-  setCollapsed: (collapsed: boolean) => void
-}>({
-  collapsed: false,
-  setCollapsed: () => {},
-})
-
-export const useSidebar = () => useContext(SidebarContext)
 
 interface SidebarProps {
   mobileOpen: boolean
@@ -169,19 +159,19 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }: 
           <Link 
             href="/" 
             className={cn(
-              "flex items-center gap-3 overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              collapsed && "lg:justify-center"
+              "flex items-center overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              collapsed ? "lg:justify-center w-full" : "gap-3"
             )}
-            aria-label="PG Manager - Go to dashboard"
+            aria-label="Staytraq - Go to dashboard"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary" aria-hidden="true">
-              <Building2 className="h-5 w-5 text-primary-foreground" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg overflow-hidden" aria-hidden="true">
+              <img src="/logo.png" alt="Staytraq Logo" className="h-full w-full object-cover" />
             </div>
             <span className={cn(
               "whitespace-nowrap text-lg font-semibold tracking-tight text-foreground",
               collapsed ? "lg:hidden" : "lg:inline"
             )}>
-              PG Manager
+              Staytraq
             </span>
           </Link>
           <Button
@@ -207,11 +197,11 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }: 
                   aria-current={isActive ? "page" : undefined}
                   aria-describedby={collapsed ? undefined : `${navId}-${item.label.toLowerCase()}-desc`}
                   className={cn(
-                    "flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    "flex items-center overflow-hidden rounded-lg py-2.5 text-sm font-medium transition-all duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    collapsed && "lg:justify-center lg:px-2"
+                    collapsed ? "lg:justify-center lg:px-0" : "gap-3 px-3"
                   )}
                 >
                   <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -292,7 +282,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }: 
               ) : (
                 <>
                   <p className="whitespace-nowrap text-xs font-medium text-foreground">
-                    PG Rent Manager
+                    Staytraq
                   </p>
                   <p className="mt-0.5 whitespace-nowrap text-xs text-muted-foreground">
                     Version 1.0.0
@@ -304,7 +294,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }: 
                 {collapsed && (
                   <>
                     <p className="whitespace-nowrap text-xs font-medium text-foreground">
-                      PG Rent Manager
+                      Staytraq
                     </p>
                     <p className="mt-0.5 whitespace-nowrap text-xs text-muted-foreground">
                       Version 1.0.0

@@ -20,16 +20,17 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
-const rentData = [
-  { month: "Jan", collected: 45000, pending: 5000 },
-  { month: "Feb", collected: 48000, pending: 2000 },
-  { month: "Mar", collected: 47000, pending: 3000 },
-  { month: "Apr", collected: 50000, pending: 0 },
-  { month: "May", collected: 49000, pending: 1000 },
-  { month: "Jun", collected: 52000, pending: 3000 },
-]
+export interface RentCollectionData {
+  month: string
+  collected: number
+  pending: number
+}
 
-export function RentCollectionChart() {
+interface RentCollectionChartProps {
+  data: RentCollectionData[]
+}
+
+export function RentCollectionChart({ data }: RentCollectionChartProps) {
   return (
     <Card className="min-w-0 overflow-hidden transition-shadow hover:shadow-md">
       <CardHeader className="pb-4">
@@ -53,7 +54,7 @@ export function RentCollectionChart() {
           className="aspect-[4/3] w-full max-h-[300px]"
         >
           <BarChart
-            data={rentData}
+            data={data}
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
           >
             <CartesianGrid 

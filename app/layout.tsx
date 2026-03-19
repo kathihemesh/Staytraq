@@ -3,14 +3,16 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/components/auth-provider'
+import { SidebarProvider } from '@/components/dashboard/sidebar-context'
+import { Toaster } from 'sonner'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'PG Rent Manager - Dashboard',
-  description: 'Modern PG rent management system for tracking tenants, rooms, and payments',
+  title: 'Staytraq - Dashboard',
+  description: 'Modern Staytraq management system for tracking tenants, rooms, and payments',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -47,8 +49,11 @@ export default function RootLayout({
           storageKey="pg-manager-theme"
         >
           <AuthProvider>
-            {children}
+            <SidebarProvider>
+              {children}
+            </SidebarProvider>
           </AuthProvider>
+          <Toaster position="top-center" richColors />
         </ThemeProvider>
         <Analytics />
       </body>

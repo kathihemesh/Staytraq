@@ -29,8 +29,12 @@ export function Header({ title, onMenuClick, isMobileMenuOpen }: HeaderProps) {
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
-    await logout()
-    // No need to setIsLoggingOut(false) as we'll be redirected
+    try {
+      await logout()
+    } finally {
+      // If logout hangs/fails and no redirect happens, don't trap the UI.
+      setIsLoggingOut(false)
+    }
   }
 
   // Get user initials for avatar
@@ -111,7 +115,9 @@ export function Header({ title, onMenuClick, isMobileMenuOpen }: HeaderProps) {
                 aria-label="User menu"
               >
                 <Avatar className="h-9 w-9 ring-2 ring-border">
-                  <AvatarImage src="/avatar.jpg" alt="" />
+                  {user?.user_metadata?.avatar_url ? (
+                    <AvatarImage src={user.user_metadata.avatar_url} alt={user.email || ""} />
+                  ) : null}
                   <AvatarFallback className="bg-primary text-sm font-medium text-primary-foreground">
                     {getUserInitials()}
                   </AvatarFallback>
