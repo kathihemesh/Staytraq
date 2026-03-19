@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 
-const supabase = createClient()
+
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { useRouter } from "next/navigation"
 
 export default function ForgotPasswordPage() {
+  const supabase = createClient()
   const router = useRouter()
   const [authType, setAuthType] = useState<"phone" | "email">("phone")
   const [step, setStep] = useState<"initial" | "otp">("initial")

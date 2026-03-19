@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 
-const supabase = createClient()
+
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 
 export default function SignupPage() {
+  const supabase = createClient()
   const [showPassword, setShowPassword] = useState(false)
   const [authType, setAuthType] = useState<"phone" | "email">("phone")
   const [step, setStep] = useState<"initial" | "otp" | "password">("initial")

@@ -1,10 +1,10 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
-const supabase = createClient()
+
 import type { User, Session } from "@supabase/supabase-js"
 
 type OnboardingStatus = "unknown" | "onboarded" | "not_onboarded"
@@ -28,6 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const PUBLIC_ROUTES = ["/login", "/reset-password", "/forgot-password", "/signup"]
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const supabase = useMemo(() => createClient(), [])
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>("unknown")
   const [authReady, setAuthReady] = useState(false)

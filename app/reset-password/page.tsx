@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 
-const supabase = createClient()
+
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function ResetPasswordPage() {
+  const supabase = createClient()
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)

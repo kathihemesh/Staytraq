@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { createClient } from "@/lib/supabase/client"
 
-const supabase = createClient()
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { runWithNetworkRetry } from "@/lib/networkRetry"
 
 export default function OnboardingPage() {
+  const supabase = createClient()
   const { user, isOnboarded, isOnboardingKnown, isLoading: isAuthLoading, checkOnboardingStatus } = useAuth()
   const router = useRouter()
 

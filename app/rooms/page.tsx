@@ -53,7 +53,7 @@ import {
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 
-const supabase = createClient()
+
 import { useAuth } from "@/components/auth-provider"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -137,6 +137,7 @@ function mapDbRowToRoom(row: any): Room {
 // --- COMPONENT ---
 
 export default function RoomsPage() {
+  const supabase = createClient()
   const { user } = useAuth()
   const [rooms, setRooms] = useState<Room[]>([])
   const [search, setSearch] = useState("")

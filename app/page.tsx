@@ -12,7 +12,7 @@ import { Users, IndianRupee, Clock, AlertTriangle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 
-const supabase = createClient()
+
 import { runWithNetworkRetry } from "@/lib/networkRetry"
 
 interface ActivityItem {
@@ -25,6 +25,7 @@ interface ActivityItem {
 }
 
 export default function DashboardPage() {
+  const supabase = createClient()
   const { authReady, isLoading: isAuthLoading, isAuthenticated, user } = useAuth()
   
   const [dataLoading, setDataLoading] = useState(true)
