@@ -11,7 +11,13 @@ function getSupabaseEnv() {
 export function createClient() {
   const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv()
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    // IMPORTANT: Don't throw during static prerender/build.
+    // Vercel builds can run without env vars, and we only need to prevent crashes.
+    // Auth/data fetching will fail later, but those codepaths are already wrapped.
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[supabase] Missing env vars; using placeholder Supabase client.')
+    }
+    return createBrowserClient('https://invalid.supabase.co', 'invalid-anon-key')
   }
 
   return createBrowserClient(supabaseUrl, supabaseAnonKey)

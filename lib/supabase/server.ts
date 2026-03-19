@@ -13,13 +13,19 @@ export async function createClient() {
   const cookieStore = await cookies()
 
   const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv()
+  const url = supabaseUrl ?? 'https://invalid.supabase.co'
+  const anonKey = supabaseAnonKey ?? 'invalid-anon-key'
+
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+    // IMPORTANT: Don't throw during static prerender/build.
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[supabase] Missing env vars; using placeholder server client.')
+    }
   }
 
   return createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
