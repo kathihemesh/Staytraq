@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Avoid redirecting until we know onboarding status to prevent flicker.
       if (!isOnboardingKnown) return
 
-      if (!isOnboarded && pathname !== "/onboarding") {
+      if (!isOnboarded && !["/onboarding", "/signup", "/forgot-password", "/reset-password"].includes(pathname)) {
         // If authenticated but not onboarded, redirect to onboarding 
         router.push("/onboarding")
       } else if (isOnboarded && (pathname === "/login" || pathname === "/signup" || pathname === "/onboarding")) {
