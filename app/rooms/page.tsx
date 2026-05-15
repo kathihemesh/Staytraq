@@ -118,13 +118,26 @@ function generateBeds(totalBeds: number, occupiedBeds: number): BedInfo[] {
 function mapDbRowToRoom(row: any): Room {
   const totalBeds = Number(row.total_beds) || 0
   const occupiedBeds = Number(row.occupied_beds) || 0
+  
+  let computedStatus = row.status || "vacant"
+  
+  if (computedStatus !== "maintenance") {
+    if (occupiedBeds === 0) {
+      computedStatus = "vacant"
+    } else if (occupiedBeds >= totalBeds) {
+      computedStatus = "full"
+    } else {
+      computedStatus = "partially occupied"
+    }
+  }
+
   return {
     id: String(row.id),
     number: row.room_number || "",
     floor: floorNoToLabel(Number(row.floor_no) || 0),
     floorNo: Number(row.floor_no) || 0,
     type: roomTypeToUi(row.room_type || "non-ac"),
-    status: row.status || "vacant",
+    status: computedStatus,
     capacity: totalBeds,
     rentAmount: Number(row.rent_amount) || 0,
     maintenanceFee: Number(row.maintenance) || 0,
@@ -448,13 +461,13 @@ export default function RoomsPage() {
   const getStatusConfig = (status: Room["status"]) => {
     switch (status) {
       case "vacant":
-        return { label: "Vacant", color: "bg-success text-success-foreground", border: "border-success/30", badge: "bg-success/10 text-success" }
+        return { label: "Vacant", color: "bg-success text-success-foreground", border: "border-success/30", badge: "bg-success/10 text-success", track: "bg-success/20" }
       case "partially occupied":
-        return { label: "Partially Occupied", color: "bg-warning text-warning-foreground", border: "border-warning/30", badge: "bg-warning/10 text-warning" }
+        return { label: "Partially Occupied", color: "bg-warning text-warning-foreground", border: "border-warning/30", badge: "bg-warning/10 text-warning", track: "bg-warning/20" }
       case "full":
-        return { label: "Full", color: "bg-destructive text-destructive-foreground", border: "border-destructive/30", badge: "bg-destructive/10 text-destructive" }
+        return { label: "Full", color: "bg-destructive text-destructive-foreground", border: "border-destructive/30", badge: "bg-destructive/10 text-destructive", track: "bg-destructive/20" }
       case "maintenance":
-        return { label: "Maintenance", color: "bg-orange-500 text-white", border: "border-orange-500/30", badge: "bg-orange-500/10 text-orange-600" }
+        return { label: "Maintenance", color: "bg-orange-500 text-white", border: "border-orange-500/30", badge: "bg-orange-500/10 text-orange-600", track: "bg-orange-500/20" }
     }
   }
 
@@ -822,9 +835,13 @@ export default function RoomsPage() {
                   </div>
 
                   {/* Status Bar */}
-                  <div className="mt-4 h-1 w-full bg-muted rounded-full overflow-hidden">
+                  <div className={cn("mt-4 h-1.5 w-full rounded-full overflow-hidden", config.track)}>
                     <div 
-                      className={cn("h-full transition-all duration-500", config.color)}
+                      className={cn(
+                        "h-full transition-all duration-500", 
+                        config.color.split(" ")[0],
+                        room.status === "maintenance" && "bg-maintenance-stripes"
+                      )}
                       style={{ width: `${room.capacity > 0 ? (occupancyCount / room.capacity) * 100 : 0}%` }}
                     />
                   </div>
