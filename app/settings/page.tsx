@@ -106,13 +106,13 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lateFee" className="text-sm font-medium">Late Payment Fee (%)</Label>
-                <Input id="lateFee" type="number" defaultValue="5" className="bg-muted/50 focus:bg-background" />
+                <Input id="lateFee" type="number" defaultValue="5" className="bg-muted/50 focus:bg-background" onWheel={(e) => (e.target as HTMLElement).blur()} />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="gracePeriod" className="text-sm font-medium">Grace Period (days)</Label>
-                <Input id="gracePeriod" type="number" defaultValue="3" className="bg-muted/50 focus:bg-background" />
+                <Input id="gracePeriod" type="number" defaultValue="3" className="bg-muted/50 focus:bg-background" onWheel={(e) => (e.target as HTMLElement).blur()} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="reminderDays" className="text-sm font-medium">Days before due date</Label>
-                    <Input id="reminderDays" type="number" defaultValue="3" className="bg-background" />
+                    <Input id="reminderDays" type="number" defaultValue="3" className="bg-background" onWheel={(e) => (e.target as HTMLElement).blur()} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="reminderTime" className="text-sm font-medium">Reminder time</Label>

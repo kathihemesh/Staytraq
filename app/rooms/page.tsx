@@ -658,6 +658,7 @@ export default function RoomsPage() {
                         placeholder="2" 
                         value={addForm.capacity}
                         onChange={(e) => setAddForm(prev => ({ ...prev, capacity: parseInt(e.target.value) || 0 }))}
+                        onWheel={(e) => (e.target as HTMLElement).blur()}
                       />
                     </div>
                   </div>
@@ -670,6 +671,7 @@ export default function RoomsPage() {
                         placeholder="12000" 
                         value={addForm.rentAmount}
                         onChange={(e) => setAddForm(prev => ({ ...prev, rentAmount: parseInt(e.target.value) || 0 }))}
+                        onWheel={(e) => (e.target as HTMLElement).blur()}
                       />
                     </div>
                     <div className="space-y-2">
@@ -680,6 +682,7 @@ export default function RoomsPage() {
                         placeholder="1000" 
                         value={addForm.maintenanceFee}
                         onChange={(e) => setAddForm(prev => ({ ...prev, maintenanceFee: parseInt(e.target.value) || 0 }))}
+                        onWheel={(e) => (e.target as HTMLElement).blur()}
                       />
                     </div>
                   </div>
@@ -978,6 +981,7 @@ export default function RoomsPage() {
                                   type={field.type}
                                   value={(editForm[field.key] as any) || ""}
                                   onChange={(e) => setEditForm(prev => ({ ...prev, [field.key]: field.type === "number" ? parseInt(e.target.value) : e.target.value }))}
+                                  onWheel={(e) => (e.target as HTMLElement).blur()}
                                 />
                               )
                             ) : (
