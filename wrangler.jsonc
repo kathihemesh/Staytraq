@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "staytraq",
+  "compatibility_date": "2026-05-16",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "staytraq"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}
