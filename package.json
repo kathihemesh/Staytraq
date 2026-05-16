@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint ."
+    "build:cf": "opennextjs-cloudflare build",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
