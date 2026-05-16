@@ -41,6 +41,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -48,7 +49,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Plus, Search, MoreHorizontal, Pencil, Trash2, Phone, Home,
   Mail, Calendar, CreditCard, Clock, FileText, UserMinus, Download,
-  Filter, ArrowUpDown, MessageSquare, AlertCircle, Users, Upload, X, Info
+  Filter, ArrowUpDown, MessageSquare, AlertCircle, Users, Upload, X, Info, Eye, EyeOff
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -190,6 +191,7 @@ export default function TenantsPage() {
   // Sidebar Edit State (like rooms page)
   const [isEditingTenant, setIsEditingTenant] = useState(false)
   const [editTenantForm, setEditTenantForm] = useState<Partial<Tenant>>({})
+  const [showIdDocument, setShowIdDocument] = useState(false)
 
   // Derived Values
   const activeTenant = tenants.find(t => t.id === viewTenantId) || null
@@ -216,11 +218,13 @@ export default function TenantsPage() {
     setTenantIds(newIds)
   }
 
-  const handleUploadId = (index: number) => {
-    // Mock upload - setting a fake filename
-    const newIds = [...tenantIds]
-    newIds[index].fileName = `id_document_${index + 1}.pdf`
-    setTenantIds(newIds)
+  const handleUploadId = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const newIds = [...tenantIds]
+      newIds[index].fileName = file.name
+      setTenantIds(newIds)
+    }
   }
 
   const filteredTenants = tenants.filter(tenant => {
@@ -552,7 +556,7 @@ export default function TenantsPage() {
       {/* --- MODALS & DRAWERS --- */}
 
       {/* 1. Tenant Profile Sidebar (with inline edit mode, like Rooms page) */}
-      <Sheet open={!!viewTenantId} onOpenChange={(open) => { if (!open) { setViewTenantId(null); setIsEditingTenant(false); } }}>
+      <Sheet open={!!viewTenantId} onOpenChange={(open) => { if (!open) { setViewTenantId(null); setIsEditingTenant(false); setShowIdDocument(false); } }}>
         <SheetContent className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto p-0 flex flex-col h-full bg-background">
           {activeTenant && (
             <>
@@ -681,7 +685,6 @@ export default function TenantsPage() {
                         <div className="grid gap-4">
                           {[
                             { label: "ID Type", value: activeTenant.idType },
-                            { label: "ID Number", value: activeTenant.idNumber },
                             { label: "Agreement Duration", value: activeTenant.agreementDuration },
                             { label: "Move-in Date", value: activeTenant.moveInDate },
                           ].map((field) => (
@@ -692,6 +695,27 @@ export default function TenantsPage() {
                               </div>
                             </div>
                           ))}
+                          <div className="grid grid-cols-5 items-center gap-4">
+                            <Label className="col-span-2 text-xs font-medium text-muted-foreground">Uploaded ID</Label>
+                            <div className="col-span-3 flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowIdDocument(!showIdDocument)}
+                                className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                              >
+                                {showIdDocument ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                                {showIdDocument ? "Hide Document" : "View Document"}
+                              </Button>
+                            </div>
+                          </div>
+                          {showIdDocument && (
+                            <div className="mt-2 p-4 border rounded-xl bg-muted/20 flex flex-col items-center justify-center h-40">
+                              <FileText className="h-8 w-8 text-muted-foreground mb-2" />
+                              <span className="text-sm text-muted-foreground">ID Document Preview</span>
+                              <span className="text-xs text-muted-foreground mt-1">(Image/PDF will be shown here)</span>
+                            </div>
+                          )}
                         </div>
                       </section>
 
@@ -803,17 +827,24 @@ export default function TenantsPage() {
                     <Label htmlFor="add-email">Email (Optional)</Label>
                     <Input id="add-email" type="email" placeholder="tenant@example.com" />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="add-alt-phone">Alternate Phone (Optional)</Label>
-                    <Input id="add-alt-phone" placeholder="+91 XXXXX XXXXX" />
-                  </div>
                 </div>
               </div>
 
               {/* Room Allocation */}
               <div className="space-y-4">
                 <h4 className="font-medium flex items-center gap-2"><div className="h-6 w-1 bg-primary rounded-full"></div>Room Allocation</h4>
-                <div className="grid gap-4 sm:grid-cols-1">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label>Select Floor <span className="text-destructive">*</span></Label>
+                    <Select>
+                      <SelectTrigger><SelectValue placeholder="Select a floor" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ground">Ground Floor</SelectItem>
+                        <SelectItem value="1st">1st Floor</SelectItem>
+                        <SelectItem value="2nd">2nd Floor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="grid gap-2">
                     <Label>Select Room <span className="text-destructive">*</span></Label>
                     <Select>
@@ -832,10 +863,6 @@ export default function TenantsPage() {
                 <h4 className="font-medium flex items-center gap-2"><div className="h-6 w-1 bg-primary rounded-full"></div>Financials & Terms</h4>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Monthly Rent</Label>
-                    <Input type="number" placeholder="₹" />
-                  </div>
-                  <div className="grid gap-2">
                     <Label>Security Deposit</Label>
                     <Input type="number" placeholder="₹" />
                   </div>
@@ -845,13 +872,7 @@ export default function TenantsPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Rent Due Date</Label>
-                    <Select defaultValue="1">
-                      <SelectTrigger><SelectValue placeholder="Select day" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1st of month</SelectItem>
-                        <SelectItem value="5">5th of month</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input type="date" />
                   </div>
                   <div className="grid gap-2">
                     <Label>Move-In Date</Label>
@@ -896,19 +917,30 @@ export default function TenantsPage() {
                         </Select>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          type="button" 
-                          variant={doc.fileName ? "secondary" : "outline"} 
-                          className={cn("h-9 flex-1 gap-2 border-dashed", doc.fileName && "border-solid bg-success/5 text-success hover:bg-success/10 border-success/20")}
-                          onClick={() => handleUploadId(index)}
-                        >
-                          {doc.fileName ? (
-                            <FileText className="h-4 w-4" />
-                          ) : (
-                            <Upload className="h-4 w-4" />
-                          )}
-                          <span className="truncate">{doc.fileName || "Upload ID"}</span>
-                        </Button>
+                        <div className="flex-1 relative">
+                          <Input
+                            id={`upload-id-${index}`}
+                            type="file"
+                            className="hidden"
+                            onChange={(e) => handleUploadId(index, e)}
+                            accept="image/*,.pdf"
+                          />
+                          <Button 
+                            type="button" 
+                            variant={doc.fileName ? "secondary" : "outline"} 
+                            className={cn("h-9 w-full gap-2 border-dashed", doc.fileName && "border-solid bg-success/5 text-success hover:bg-success/10 border-success/20")}
+                            asChild
+                          >
+                            <label htmlFor={`upload-id-${index}`} className="cursor-pointer">
+                              {doc.fileName ? (
+                                <FileText className="h-4 w-4 shrink-0" />
+                              ) : (
+                                <Upload className="h-4 w-4 shrink-0" />
+                              )}
+                              <span className="truncate">{doc.fileName || "Upload ID"}</span>
+                            </label>
+                          </Button>
+                        </div>
                         {index > 0 && (
                           <Button 
                             type="button" 
