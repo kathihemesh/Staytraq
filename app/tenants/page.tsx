@@ -51,7 +51,7 @@ import { format } from "date-fns"
 import {
   Plus, Search, MoreHorizontal, Pencil, Trash2, Phone, Home,
   Mail, Calendar as CalendarIcon, CreditCard, Clock, FileText, UserMinus, Download,
-  Filter, ArrowUpDown, MessageSquare, AlertCircle, Users, Upload, X, Info
+  Filter, ArrowUpDown, MessageSquare, AlertCircle, Users, Upload, X, Info, Loader2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
@@ -391,6 +391,39 @@ export default function TenantsPage() {
       fetchData()
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" })
+    }
+  }
+
+  const handleUpdateTenant = async () => {
+    if (!activeTenant) return
+    setIsSaving(true)
+    try {
+      const updatePayload: Record<string, any> = {
+        name: editTenantForm.name,
+        mobile_number: editTenantForm.phone,
+        email: editTenantForm.email,
+        deposit_amount: editTenantForm.deposit,
+        extra_charges: editTenantForm.extraCharges,
+        rent_due_day: parseInt(editTenantForm.dueDate?.toString() || "1"),
+        notes: editTenantForm.notes,
+        updated_at: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from("tenants_table")
+        .update(updatePayload)
+        .eq("id", activeTenant.id)
+
+      if (error) throw error
+
+      toast({ title: "Success", description: "Tenant profile updated successfully." })
+      setIsEditingTenant(false)
+      fetchData()
+    } catch (error: any) {
+      console.error("Update error:", error)
+      toast({ title: "Error", description: error.message, variant: "destructive" })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -909,8 +942,9 @@ export default function TenantsPage() {
                                   <Input
                                     className="h-9"
                                     type={field.type}
-                                    value={(editTenantForm[field.key] as any) || ""}
+                                    value={editTenantForm[field.key] !== undefined ? String(editTenantForm[field.key]) : ""}
                                     onChange={(e) => setEditTenantForm(prev => ({ ...prev, [field.key]: field.type === "number" ? parseInt(e.target.value) || 0 : e.target.value }))}
+                                    onWheel={(e) => (e.target as HTMLElement).blur()}
                                   />
                                 ) : (
                                   <p className="text-sm font-semibold">
@@ -1137,13 +1171,17 @@ export default function TenantsPage() {
                 <SheetFooter className="p-6 border-t bg-background shrink-0 flex flex-row sm:justify-start gap-3">
                   <Button
                     className="flex-1 h-11 shadow-lg bg-primary hover:bg-primary/90"
-                    onClick={() => {
-                      // Apply edits to tenants state
-                      setTenants(prev => prev.map(t => t.id === activeTenant.id ? { ...t, ...editTenantForm } as Tenant : t))
-                      setIsEditingTenant(false)
-                    }}
+                    disabled={isSaving}
+                    onClick={handleUpdateTenant}
                   >
-                    Save Changes
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
                   </Button>
                   <Button
                     variant="outline"
@@ -1206,13 +1244,13 @@ export default function TenantsPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Select Room <span className="text-destructive">*</span></Label>
-                    <Select value={newTenantRoomId} onValueChange={setNewTenantRoomId}>
-                      <SelectTrigger><SelectValue placeholder="Select a room" /></SelectTrigger>
+                    <Select value={newTenantRoomId} onValueChange={setNewTenantRoomId} disabled={!newTenantFloor}>
+                      <SelectTrigger><SelectValue placeholder={newTenantFloor ? "Select a room" : "Select floor first"} /></SelectTrigger>
                       <SelectContent>
                         {rooms
                           .filter(r => {
                             const hasAvailableBeds = ((r.total_beds || 0) - (r.occupied_beds || 0)) > 0
-                            const matchesFloor = !newTenantFloor || r.floor_no.toString() === newTenantFloor
+                            const matchesFloor = newTenantFloor && r.floor_no.toString() === newTenantFloor
                             return hasAvailableBeds && matchesFloor
                           })
                           .map(room => (
@@ -1233,11 +1271,29 @@ export default function TenantsPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Security Deposit</Label>
-                    <Input type="number" placeholder="₹" value={newTenantDeposit} onChange={e => setNewTenantDeposit(e.target.value)} />
+                    <Input 
+                      type="number" 
+                      placeholder="₹" 
+                      value={newTenantDeposit} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        setNewTenantDeposit(val === "" ? "" : parseInt(val).toString());
+                      }} 
+                      onWheel={(e) => (e.target as HTMLElement).blur()}
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label>Extra Charges / Deductions (₹)</Label>
-                    <Input type="number" placeholder="₹" value={newTenantExtraCharges} onChange={e => setNewTenantExtraCharges(e.target.value)} />
+                    <Input 
+                      type="number" 
+                      placeholder="₹" 
+                      value={newTenantExtraCharges} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        setNewTenantExtraCharges(val === "" ? "" : parseInt(val).toString());
+                      }} 
+                      onWheel={(e) => (e.target as HTMLElement).blur()}
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label>Rent Due Date</Label>
@@ -1512,15 +1568,15 @@ export default function TenantsPage() {
                  <div className="grid grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label className="text-xs">Pending Rent</Label>
-                      <Input type="number" defaultValue="0" />
+                      <Input type="number" defaultValue="0" onWheel={(e) => (e.target as HTMLElement).blur()} />
                     </div>
                     <div className="grid gap-2">
                       <Label className="text-xs">Damages</Label>
-                      <Input type="number" defaultValue="0" />
+                      <Input type="number" defaultValue="0" onWheel={(e) => (e.target as HTMLElement).blur()} />
                     </div>
                     <div className="grid gap-2">
                       <Label className="text-xs">Cleaning</Label>
-                      <Input type="number" defaultValue="500" />
+                      <Input type="number" defaultValue="500" onWheel={(e) => (e.target as HTMLElement).blur()} />
                     </div>
                  </div>
                </div>
@@ -1541,7 +1597,7 @@ export default function TenantsPage() {
                     </div>
                     <div className="grid gap-2">
                       <Label>Final Refund Amount</Label>
-                      <Input type="number" defaultValue={movingOutTenant.deposit - 500} className="font-semibold text-success border-success/50" />
+                      <Input type="number" defaultValue={movingOutTenant.deposit - 500} className="font-semibold text-success border-success/50" onWheel={(e) => (e.target as HTMLElement).blur()} />
                     </div>
                  </div>
                </div>
