@@ -112,10 +112,10 @@ export default function TenantsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   
   // Date State for Add Tenant
-  const [newDueDate, setNewDueDate] = useState<Date | undefined>(undefined)
+  const [newDueDayNumber, setNewDueDayNumber] = useState<string>("")
+  const [defaultDueDay, setDefaultDueDay] = useState<number>(1)
   const [newMoveInDate, setNewMoveInDate] = useState<Date | undefined>(undefined)
   const [moveOutDate, setMoveOutDate] = useState<Date | undefined>(undefined)
-  const [dueDatePopoverOpen, setDueDatePopoverOpen] = useState(false)
   const [moveInDatePopoverOpen, setMoveInDatePopoverOpen] = useState(false)
   
   // Selection State
@@ -162,9 +162,19 @@ export default function TenantsPage() {
     if (!user?.id) return
     try {
       setIsLoading(true)
-      
+
       const { data: pgData } = await supabase.from("pg_details").select("id").eq("owner_id", user.id).single()
       if (!pgData) throw new Error("PG details not found")
+
+      // Fetch settings for default due day
+      const { data: settingsData } = await supabase
+        .from("settings")
+        .select("rent_due_day")
+        .eq("owner_id", user.id)
+        .single()
+      if (settingsData?.rent_due_day) {
+        setDefaultDueDay(Number(settingsData.rent_due_day))
+      }
       
       const { data: roomsData, error: roomsError } = await supabase
         .from("rooms_table")
@@ -226,9 +236,8 @@ export default function TenantsPage() {
     setNewTenantNotes("")
     setNewTenantIdDocs([])
     setSelectedIdType("")
-    setNewDueDate(undefined)
+    setNewDueDayNumber("")
     setNewMoveInDate(undefined)
-    setDueDatePopoverOpen(false)
     setMoveInDatePopoverOpen(false)
   }
 
@@ -290,7 +299,7 @@ export default function TenantsPage() {
         }
       }
 
-      const dueDateNum = newDueDate ? newDueDate.getDate() : 1
+      const dueDateNum = newDueDayNumber ? parseInt(newDueDayNumber) : defaultDueDay
 
       const insertData = {
         owner_id: user?.id,
@@ -1296,29 +1305,25 @@ export default function TenantsPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Rent Due Date</Label>
-                    <Popover open={dueDatePopoverOpen} onOpenChange={setDueDatePopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !newDueDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {newDueDate ? format(newDueDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={newDueDate}
-                          onSelect={(d) => { setNewDueDate(d); setDueDatePopoverOpen(false); }}
-                          className="rounded-md border shadow"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Label>Rent Due Day
+                      <span className="ml-1 text-xs text-muted-foreground font-normal">(default: {defaultDueDay}th)</span>
+                    </Label>
+                    <Select
+                      value={newDueDayNumber || String(defaultDueDay)}
+                      onValueChange={setNewDueDayNumber}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`${defaultDueDay}th of every month`} />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                          <SelectItem key={day} value={String(day)}>
+                            {day}{day === 1 ? "st" : day === 2 ? "nd" : day === 3 ? "rd" : "th"} of every month
+                            {day === defaultDueDay ? " (default)" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid gap-2">
                     <Label>Move-In Date</Label>
