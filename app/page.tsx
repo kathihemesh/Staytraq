@@ -86,11 +86,11 @@ export default function DashboardPage() {
 
         if (pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear) {
           if (payment.status === "paid" || payment.status === "success" || payment.status === "completed") {
-            currentPaid += Number(payment.amount || 0)
+            currentPaid += Number(payment.total_amount || payment.amount || 0)
             currentMonthStatusCounts.paid++
           } else if (payment.status === "pending") {
             currentPendingCount++
-            currentPendingTotal += Number(payment.amount || 0)
+            currentPendingTotal += Number(payment.total_amount || payment.amount || 0)
             currentMonthStatusCounts.pending++
           } else if (payment.status === "late") {
             currentLateCount++
@@ -130,9 +130,9 @@ export default function DashboardPage() {
 
         if (monthData) {
           if (payment.status === "paid" || payment.status === "success" || payment.status === "completed") {
-            monthData.collected += Number(payment.amount || 0)
+            monthData.collected += Number(payment.total_amount || payment.amount || 0)
           } else if (payment.status === "pending" || payment.status === "late") {
-            monthData.pending += Number(payment.amount || 0)
+            monthData.pending += Number(payment.total_amount || payment.amount || 0)
           }
         }
       })
@@ -174,7 +174,7 @@ export default function DashboardPage() {
           activityList.push({
             tenant: tenantMap.get(payment.tenant_id) || "Unknown Tenant",
             action: actionStr,
-            amount: payment.amount ? `₹${Number(payment.amount).toLocaleString()}` : "",
+            amount: (payment.total_amount || payment.amount) ? `₹${Number(payment.total_amount || payment.amount).toLocaleString()}` : "",
             status: actionStatus,
             timestamp: pDate,
             time: "",

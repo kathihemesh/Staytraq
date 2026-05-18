@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,8 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Check, IndianRupee, Clock, AlertTriangle, Home, Calendar } from "lucide-react"
+import { Search, Check, IndianRupee, Clock, AlertTriangle, Home, Calendar, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/components/auth-provider"
 
 interface Payment {
   id: string
@@ -34,98 +36,64 @@ interface Payment {
   paidDate?: string
 }
 
-const initialPayments: Payment[] = [
-  {
-    id: "1",
-    tenantName: "Rahul Sharma",
-    roomNumber: "101",
-    amount: 12500,
-    status: "paid",
-    dueDate: "2024-03-05",
-    paidDate: "2024-03-03",
-  },
-  {
-    id: "2",
-    tenantName: "Priya Patel",
-    roomNumber: "102",
-    amount: 15000,
-    status: "paid",
-    dueDate: "2024-03-01",
-    paidDate: "2024-03-01",
-  },
-  {
-    id: "3",
-    tenantName: "Amit Kumar",
-    roomNumber: "103",
-    amount: 12500,
-    status: "pending",
-    dueDate: "2024-03-05",
-  },
-  {
-    id: "4",
-    tenantName: "Sneha Gupta",
-    roomNumber: "104",
-    amount: 10000,
-    status: "late",
-    dueDate: "2024-03-01",
-  },
-  {
-    id: "5",
-    tenantName: "Vikram Singh",
-    roomNumber: "105",
-    amount: 14000,
-    status: "paid",
-    dueDate: "2024-03-10",
-    paidDate: "2024-03-08",
-  },
-  {
-    id: "6",
-    tenantName: "Neha Reddy",
-    roomNumber: "106",
-    amount: 13500,
-    status: "pending",
-    dueDate: "2024-03-05",
-  },
-  {
-    id: "7",
-    tenantName: "Karan Mehta",
-    roomNumber: "107",
-    amount: 11000,
-    status: "paid",
-    dueDate: "2024-03-01",
-    paidDate: "2024-02-28",
-  },
-  {
-    id: "8",
-    tenantName: "Anita Desai",
-    roomNumber: "108",
-    amount: 16000,
-    status: "paid",
-    dueDate: "2024-03-05",
-    paidDate: "2024-03-05",
-  },
-  {
-    id: "9",
-    tenantName: "Ravi Kumar",
-    roomNumber: "110",
-    amount: 20000,
-    status: "pending",
-    dueDate: "2024-03-10",
-  },
-  {
-    id: "10",
-    tenantName: "Deepak Singh",
-    roomNumber: "110",
-    amount: 20000,
-    status: "late",
-    dueDate: "2024-03-01",
-  },
-]
-
 export default function PaymentsPage() {
-  const [payments, setPayments] = useState<Payment[]>(initialPayments)
+  const { user } = useAuth()
+  const supabase = createClient()
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+
+  useEffect(() => {
+    async function fetchPayments() {
+      if (!user?.id) return
+      setIsLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from("payments")
+          .select(`
+            id,
+            month,
+            year,
+            rent_amount,
+            extra_charges,
+            total_amount,
+            due_date,
+            status,
+            paid_at,
+            tenant_id,
+            tenants_table (
+              name,
+              rooms_table (
+                room_number
+              )
+            )
+          `)
+          .eq("owner_id", user.id)
+          .order("due_date", { ascending: false });
+
+        if (error) throw error
+
+        const mappedPayments = (data || []).map((p: any) => ({
+          id: String(p.id),
+          tenantName: p.tenants_table?.name || "Unknown",
+          roomNumber: p.tenants_table?.rooms_table?.room_number || "—",
+          amount: Number(p.total_amount),
+          status: (p.status || "pending") as "paid" | "pending" | "late",
+          dueDate: p.due_date,
+          paidDate: p.paid_at ? p.paid_at.split("T")[0] : undefined,
+        }))
+
+        setPayments(mappedPayments)
+      } catch (err: any) {
+        console.error("Failed to load payments from Supabase:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPayments()
+  }, [user?.id, supabase])
 
   const filteredPayments = payments.filter((payment) => {
     const matchesSearch =
@@ -136,18 +104,33 @@ export default function PaymentsPage() {
     return matchesSearch && matchesStatus
   })
 
-  const handleMarkPaid = (id: string) => {
-    setPayments((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              status: "paid" as const,
-              paidDate: new Date().toISOString().split("T")[0],
-            }
-          : p
+  const handleMarkPaid = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .update({
+          status: "paid",
+          paid_at: new Date().toISOString()
+        })
+        .eq("id", Number(id))
+
+      if (error) throw error
+
+      setPayments((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                status: "paid" as const,
+                paidDate: new Date().toISOString().split("T")[0],
+              }
+            : p
+        )
       )
-    )
+    } catch (err: any) {
+      console.error("Failed to update status in Supabase:", err)
+      alert("Failed to mark payment as paid: " + err.message)
+    }
   }
 
   const totalCollected = payments
@@ -170,6 +153,17 @@ export default function PaymentsPage() {
       <Badge variant="outline" className={cn("font-medium", styles[status])}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Payments">
+        <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading payments...</p>
+        </div>
+      </DashboardLayout>
     )
   }
 

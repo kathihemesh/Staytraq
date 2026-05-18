@@ -2,12 +2,16 @@
 
 import { useState, useMemo, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+import { useReminderTenants, type ReminderTenant } from "@/lib/hooks/useReminderTenants"
+
 import {
   Select,
   SelectContent,
@@ -34,133 +38,22 @@ import {
   CalendarDays,
   IndianRupee,
   DoorOpen,
+  Loader2,
+  XCircle,
+  History,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface Tenant {
-  id: number
-  name: string
-  room: string
-  floor: number
-  status: "overdue" | "due_today" | "due_week" | "upcoming" | "paid"
-  amount: number
-  dueDate: Date
-  phone: string
-}
-
 type FilterType = "all" | "overdue" | "due_today" | "due_week" | "upcoming" | "paid"
-type FloorFilterType = "all" | 1 | 2
+type FloorFilterType = "all" | number
 type SortType = "urgency" | "due_date" | "name" | "amount" | "room"
-
-const mockTenants: Tenant[] = [
-  {
-    id: 1,
-    name: "Rajesh Sharma",
-    room: "R-101",
-    floor: 1,
-    status: "overdue",
-    amount: 8500,
-    dueDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43210",
-  },
-  {
-    id: 2,
-    name: "Priya Desai",
-    room: "R-102",
-    floor: 1,
-    status: "overdue",
-    amount: 9000,
-    dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43211",
-  },
-  {
-    id: 3,
-    name: "Amit Kumar",
-    room: "R-103",
-    floor: 1,
-    status: "due_today",
-    amount: 8500,
-    dueDate: new Date(),
-    phone: "+91 98765 43212",
-  },
-  {
-    id: 4,
-    name: "Neha Gupta",
-    room: "R-104",
-    floor: 1,
-    status: "due_week",
-    amount: 10000,
-    dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43213",
-  },
-  {
-    id: 5,
-    name: "Vikram Singh",
-    room: "R-105",
-    floor: 1,
-    status: "due_week",
-    amount: 9500,
-    dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43214",
-  },
-  {
-    id: 6,
-    name: "Sneha Reddy",
-    room: "R-201",
-    floor: 2,
-    status: "due_week",
-    amount: 12000,
-    dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43215",
-  },
-  {
-    id: 7,
-    name: "Deepak Nair",
-    room: "R-202",
-    floor: 2,
-    status: "upcoming",
-    amount: 11000,
-    dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43216",
-  },
-  {
-    id: 8,
-    name: "Arjun Patel",
-    room: "R-203",
-    floor: 2,
-    status: "upcoming",
-    amount: 9500,
-    dueDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43217",
-  },
-  {
-    id: 9,
-    name: "Pooja Malhotra",
-    room: "R-204",
-    floor: 2,
-    status: "paid",
-    amount: 10500,
-    dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43218",
-  },
-  {
-    id: 10,
-    name: "Rohit Verma",
-    room: "R-205",
-    floor: 2,
-    status: "paid",
-    amount: 8500,
-    dueDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-    phone: "+91 98765 43219",
-  },
-]
-
 const messageTemplates = {
   friendly: `Hi {name}, this is a friendly reminder that your rent of ₹{amount} for {room} is due on {dueDate}. Please make the payment at your earliest convenience. Thank you!`,
   firm: `Dear {name}, your rent payment of ₹{amount} for {room} is now due. Please clear the payment immediately to avoid any inconvenience. Contact us if you have any questions.`,
   final: `URGENT: {name}, your rent of ₹{amount} for {room} is overdue. Immediate payment is required. Please settle this at once to avoid further action.`,
   custom: "",
 }
+
 
 const statusConfig = {
   overdue: {
@@ -206,6 +99,9 @@ function getRelativeDueDate(dueDate: Date) {
 }
 
 export default function RemindersPage() {
+  const { toast } = useToast()
+  const { tenants: allTenants, isLoading, error, refresh } = useReminderTenants()
+
   const [selectedTenants, setSelectedTenants] = useState<number[]>([])
   const [messageType, setMessageType] = useState<"friendly" | "firm" | "final" | "custom">("friendly")
   const [customMessage, setCustomMessage] = useState("")
@@ -213,11 +109,15 @@ export default function RemindersPage() {
   const [floorFilter, setFloorFilter] = useState<FloorFilterType>("all")
   const [sortBy, setSortBy] = useState<SortType>("urgency")
   const [searchTerm, setSearchTerm] = useState("")
-  const [showPreview, setShowPreview] = useState(true)
-  const [showActivity, setShowActivity] = useState(false)
   const [isMobileComposerOpen, setIsMobileComposerOpen] = useState(false)
-  const [sentLog, setSentLog] = useState<Array<{ id: number; tenant: string; template: string; time: Date }>>([])
-  
+  const [isSending, setIsSending] = useState(false)
+  const [sendResult, setSendResult] = useState<{
+    type: 'success' | 'partial' | 'error';
+    title: string;
+    message: string;
+    failedDetails?: any[];
+  } | null>(null)
+
   const [isMounted, setIsMounted] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -225,8 +125,21 @@ export default function RemindersPage() {
     setIsMounted(true)
   }, [])
 
+  // Auto-dismiss the custom toast after 5 seconds
+  useEffect(() => {
+    if (sendResult) {
+      const timer = setTimeout(() => setSendResult(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [sendResult])
+
+  // Dynamic floor list from live data
+  const availableFloors = useMemo(() => {
+    return Array.from(new Set(allTenants.map(t => t.floor))).sort()
+  }, [allTenants])
+
   const filteredAndSortedTenants = useMemo(() => {
-    let filtered = mockTenants.filter((t) => {
+    let filtered = allTenants.filter((t) => {
       const matchesStatus = filter === "all" || t.status === filter
       const matchesFloor = floorFilter === "all" || t.floor === floorFilter
       const matchesSearch =
@@ -247,13 +160,13 @@ export default function RemindersPage() {
     })
 
     return filtered
-  }, [filter, floorFilter, sortBy, searchTerm])
+  }, [filter, floorFilter, sortBy, searchTerm, allTenants])
 
   const stats = useMemo(() => ({
-    overdue: mockTenants.filter((t) => t.status === "overdue").length,
-    due_week: mockTenants.filter((t) => t.status === "due_today" || t.status === "due_week").length,
-    paid: mockTenants.filter((t) => t.status === "paid").length,
-  }), [])
+    overdue: allTenants.filter((t) => t.status === "overdue").length,
+    due_week: allTenants.filter((t) => t.status === "due_today" || t.status === "due_week").length,
+    paid: allTenants.filter((t) => t.status === "paid").length,
+  }), [allTenants])
 
   const toggleTenant = (id: number) => {
     setSelectedTenants((prev) => prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id])
@@ -267,21 +180,46 @@ export default function RemindersPage() {
     }
   }
 
-  const sendReminders = () => {
+  const sendReminders = async () => {
     if (selectedTenants.length === 0) return
-    const selectedTenantsData = mockTenants.filter((t) => selectedTenants.includes(t.id))
-    
-    setSentLog((prev) => [
-      ...selectedTenantsData.map(t => ({
-        id: t.id,
-        tenant: `${t.name} (${t.room})`,
-        template: messageType === "custom" ? "Custom" : messageType,
-        time: new Date(),
-      })),
-      ...prev
-    ].slice(0, 5))
+    setIsSending(true)
+    try {
+      const selectedTenantsData = allTenants.filter((t) => selectedTenants.includes(t.id))
+      const message = getMessage(selectedTenantsData[0])
 
-    setSelectedTenants([])
+      const res = await fetch("/api/send-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantIds: selectedTenants, message, template: messageType }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) throw new Error(data.error || "Send failed")
+
+      const isSuccess = data.failed === 0;
+      const isPartial = data.sent > 0 && data.failed > 0;
+      
+      setSendResult({
+        type: isSuccess ? 'success' : isPartial ? 'partial' : 'error',
+        title: isSuccess ? 'Messages Sent Successfully!' : isPartial ? 'Partial Success' : 'Failed to Send',
+        message: isSuccess 
+          ? `Successfully sent ${data.sent} message${data.sent > 1 ? 's' : ''}.` 
+          : isPartial 
+            ? `Sent ${data.sent} message${data.sent > 1 ? 's' : ''}, but ${data.failed} failed.` 
+            : `Failed to send ${data.failed} messages. Check your Twilio config.`,
+        failedDetails: data.failedDetails
+      })
+
+      setSelectedTenants([])
+    } catch (err: any) {
+      setSendResult({
+        type: 'error',
+        title: 'Error Sending Messages',
+        message: err.message || 'An unexpected error occurred.',
+      })
+    } finally {
+      setIsSending(false)
+    }
   }
 
   const insertToken = (token: string) => {
@@ -297,7 +235,7 @@ export default function RemindersPage() {
     }, 0)
   }
 
-  const getMessage = (tenant: Tenant) => {
+  const getMessage = (tenant: ReminderTenant) => {
     const template = messageType === "custom" ? customMessage : messageTemplates[messageType]
     return template
       .replace("{name}", tenant.name.split(" ")[0])
@@ -306,7 +244,7 @@ export default function RemindersPage() {
       .replace("{dueDate}", tenant.dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" }))
   }
 
-  const selectedTenantsData = mockTenants.filter((t) => selectedTenants.includes(t.id))
+  const selectedTenantsData = allTenants.filter((t) => selectedTenants.includes(t.id))
   const isAnyFilterActive = filter !== "all" || floorFilter !== "all" || searchTerm !== "" || sortBy !== "urgency"
 
   const composerContent = (
@@ -429,7 +367,7 @@ export default function RemindersPage() {
               </svg>
 
               <div className="whitespace-pre-wrap font-sans">
-                {selectedTenantsData.length > 0 ? getMessage(selectedTenantsData[0]) : getMessage(mockTenants[0])}
+                {selectedTenantsData.length > 0 ? getMessage(selectedTenantsData[0]) : (messageType === "custom" ? (customMessage || "Your custom message will appear here…") : (messageTemplates[messageType] || "Select a template to preview…"))}
               </div>
               
               <div className="flex items-center justify-end gap-1 mt-1 -mb-1 opacity-70">
@@ -458,14 +396,36 @@ export default function RemindersPage() {
             setIsMobileComposerOpen(false)
           }}
         >
-          <Send className="mr-2 h-4 w-4" />
-          {selectedTenants.length === 0 ? "Select tenants" : `Send ${selectedTenants.length} Message${selectedTenants.length > 1 ? 's' : ''}`}
+          {isSending ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</>
+          ) : selectedTenants.length === 0 ? "Select tenants" : `Send ${selectedTenants.length} Message${selectedTenants.length > 1 ? 's' : ''}`}
         </Button>
       </div>
     </div>
   )
 
   if (!isMounted) return null
+
+  if (isLoading) return (
+    <DashboardLayout title="Reminders">
+      <div className="p-4 lg:p-6 space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+        ))}
+      </div>
+    </DashboardLayout>
+  )
+
+  if (error) return (
+    <DashboardLayout title="Reminders">
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <AlertTriangle className="h-10 w-10 text-red-500 mb-3" />
+        <p className="font-semibold text-slate-900 dark:text-white">Failed to load tenants</p>
+        <p className="text-sm text-slate-500 mt-1">{error}</p>
+        <Button variant="outline" className="mt-4" onClick={refresh}>Retry</Button>
+      </div>
+    </DashboardLayout>
+  )
 
   return (
     <DashboardLayout title="Reminders">
@@ -477,11 +437,24 @@ export default function RemindersPage() {
           {/* Header & Quick Stats */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Reminders</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Reminders</h1>
+                <Button asChild variant="outline" size="icon" className="md:hidden h-8 w-8 rounded-full">
+                  <Link href="/reminders/history">
+                    <History className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="hidden md:flex bg-white dark:bg-slate-900">
+                  <Link href="/reminders/history">
+                    <History className="h-4 w-4 mr-2" />
+                    History
+                  </Link>
+                </Button>
+              </div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Manage and send payment reminders to tenants.</p>
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {[
                 { id: "overdue", label: "Overdue", count: stats.overdue, color: "text-red-600 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 hover:bg-red-100" },
                 { id: "due_week", label: "This Week", count: stats.due_week, color: "text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100" },
@@ -535,14 +508,17 @@ export default function RemindersPage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={floorFilter.toString()} onValueChange={(v) => setFloorFilter(v === "all" ? "all" : parseInt(v) as 1 | 2)}>
+                <Select value={floorFilter.toString()} onValueChange={(v) => setFloorFilter(v === "all" ? "all" : parseInt(v))}>
                   <SelectTrigger className="w-full sm:w-[130px] h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-none shadow-none focus:ring-1 focus:ring-slate-300 dark:focus:ring-slate-700 text-xs sm:text-sm px-2 sm:px-3">
                     <SelectValue placeholder="Floor" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl shadow-xl">
                     <SelectItem value="all">All Floors</SelectItem>
-                    <SelectItem value="1">Floor 1</SelectItem>
-                    <SelectItem value="2">Floor 2</SelectItem>
+                    {availableFloors.map(floor => (
+                      <SelectItem key={floor} value={String(floor)}>
+                        {floor === 0 ? "Ground Floor" : `Floor ${floor}`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -617,11 +593,19 @@ export default function RemindersPage() {
                     className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 border-dashed rounded-3xl"
                   >
                     <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                      <Search className="h-8 w-8 text-slate-400" />
+                      {isAnyFilterActive ? (
+                        <Search className="h-8 w-8 text-slate-400" />
+                      ) : (
+                        <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                      )}
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No tenants found</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
+                      {isAnyFilterActive ? "No tenants found" : "All clear!"}
+                    </h3>
                     <p className="text-slate-500 dark:text-slate-400 max-w-sm">
-                      We couldn't find any tenants matching your current filters. Try adjusting your search criteria.
+                      {isAnyFilterActive
+                        ? "We couldn't find any tenants matching your current filters. Try adjusting your search criteria."
+                        : "No rent reminders needed right now. Upcoming payments will appear here within 10 days of their due date."}
                     </p>
                     {isAnyFilterActive && (
                       <Button
@@ -657,7 +641,7 @@ export default function RemindersPage() {
                         <div
                           onClick={() => toggleTenant(tenant.id)}
                           className={cn(
-                            "group flex items-center px-2 sm:px-4 py-4 rounded-2xl border transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5",
+                            "group flex items-center px-2 sm:px-4 py-4 rounded-2xl border transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md",
                             isSelected 
                               ? `${conf.borderActive} ${conf.bgMuted} ring-1 ring-${conf.borderActive.split('-')[1]}-500/50` 
                               : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700",
@@ -750,6 +734,40 @@ export default function RemindersPage() {
           </div>
         </div>
       </div>
+
+      {/* Custom Animated Toast */}
+      <AnimatePresence>
+        {sendResult && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 w-full max-w-sm pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="bg-white dark:bg-slate-900 shadow-2xl rounded-2xl border border-slate-200 dark:border-slate-800 p-4 pointer-events-auto flex items-start gap-3"
+            >
+              <div className={cn("mt-0.5 shrink-0", 
+                sendResult.type === 'success' ? 'text-emerald-500' :
+                sendResult.type === 'partial' ? 'text-amber-500' : 'text-red-500'
+              )}>
+                {sendResult.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : 
+                 sendResult.type === 'partial' ? <AlertTriangle className="h-5 w-5" /> : 
+                 <XCircle className="h-5 w-5" />}
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-0.5">{sendResult.title}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{sendResult.message}</p>
+              </div>
+              <button 
+                onClick={() => setSendResult(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 -mr-2 -mt-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   )
 }
