@@ -357,20 +357,20 @@ export default function RemindersPage() {
 
   return (
     <DashboardLayout title="Reminders">
-      <div className="h-[calc(100vh-100px)] flex gap-4 dark:bg-slate-900/50">
-        {/* Left Panel: Tenant List (65%) */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="min-h-[calc(100vh-100px)] flex flex-col lg:flex-row lg:gap-4 gap-0 overflow-x-hidden">
+        {/* Left Panel: Tenant List */}
+        <div className="flex-1 flex flex-col overflow-hidden lg:h-[calc(100vh-100px)]">
           {/* Header with Quick Filter Pills */}
           <div className="mb-5">
-            <h1 className="text-3xl font-bold mb-4">Reminders</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold mb-4">Reminders</h1>
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setFilter("overdue")}
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border",
                   filter === "overdue"
-                    ? "dark:bg-red-600 dark:border-red-500 dark:text-white bg-red-100 border-red-300 text-red-900"
-                    : "dark:border-red-500/30 dark:bg-transparent dark:text-red-400 border-red-200 bg-transparent text-red-700 dark:hover:bg-red-600/20 hover:bg-red-50"
+                    ? "bg-red-100 border-red-300 text-red-900 dark:bg-transparent dark:border-red-500 dark:text-red-400"
+                    : "bg-transparent border-red-200 text-red-700 hover:bg-red-50 dark:border-red-500/30 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-500/10"
                 )}
               >
                 {stats.overdue} overdue
@@ -380,8 +380,8 @@ export default function RemindersPage() {
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border",
                   filter === "due_week"
-                    ? "dark:bg-yellow-500 dark:border-yellow-400 dark:text-white bg-yellow-100 border-yellow-300 text-yellow-900"
-                    : "dark:border-yellow-500/30 dark:bg-transparent dark:text-yellow-400 border-yellow-200 bg-transparent text-yellow-700 dark:hover:bg-yellow-600/20 hover:bg-yellow-50"
+                    ? "bg-yellow-100 border-yellow-300 text-yellow-900 dark:bg-transparent dark:border-yellow-500 dark:text-yellow-400"
+                    : "bg-transparent border-yellow-200 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-500/30 dark:bg-transparent dark:text-yellow-400 dark:hover:bg-yellow-500/10"
                 )}
               >
                 {stats.due_week} this week
@@ -391,8 +391,8 @@ export default function RemindersPage() {
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border",
                   filter === "paid"
-                    ? "dark:bg-emerald-600 dark:border-emerald-500 dark:text-white bg-emerald-100 border-emerald-300 text-emerald-900"
-                    : "dark:border-emerald-500/30 dark:bg-transparent dark:text-emerald-400 border-emerald-200 bg-transparent text-emerald-700 dark:hover:bg-emerald-600/20 hover:bg-emerald-50"
+                    ? "bg-emerald-100 border-emerald-300 text-emerald-900 dark:bg-transparent dark:border-emerald-500 dark:text-emerald-400"
+                    : "bg-transparent border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-transparent dark:text-emerald-400 dark:hover:bg-emerald-500/10"
                 )}
               >
                 {stats.paid} paid
@@ -403,90 +403,66 @@ export default function RemindersPage() {
           {/* Filter & Search Bar */}
           <div className="mb-4 space-y-3">
             {/* Search Row */}
-            <div className="flex gap-2 items-center">
-              {/* Master Checkbox */}
-              <Checkbox
-                checked={selectedTenants.length === filteredAndSortedTenants.length && filteredAndSortedTenants.length > 0}
-                onCheckedChange={selectAll}
-                ref={(el) => {
-                  if (el && indeterminateCheckbox) {
-                    (el as any).indeterminate = true
-                  }
-                }}
-                className="shrink-0"
-                aria-label="Select all visible tenants"
-              />
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 dark:text-slate-500 text-slate-400" />
+            <div className="flex gap-2 items-center flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <Input
                   placeholder="Search by name or room..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 dark:bg-slate-800 dark:border-slate-700 bg-white border-slate-200"
+                  className="pl-10 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                 />
               </div>
               <button
                 onClick={() => setShowShortcuts(!showShortcuts)}
-                className="p-2 dark:hover:bg-slate-800 hover:bg-slate-100 rounded transition-colors"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
                 title="Keyboard shortcuts"
               >
-                <HelpCircle className="h-4 w-4 dark:text-slate-400 text-slate-600" />
+                <HelpCircle className="h-4 w-4 text-slate-600 dark:text-slate-400" />
               </button>
             </div>
 
-            {showShortcuts && (
-              <div className="p-3 dark:bg-slate-800 dark:border-slate-700 bg-slate-50 border border-slate-200 rounded text-xs space-y-1">
-                <p className="font-semibold mb-2 dark:text-slate-200 text-slate-900">Keyboard shortcuts:</p>
-                <p><kbd className="dark:bg-slate-700 bg-slate-200 px-1.5 py-0.5 rounded text-xs">Space</kbd> Select/deselect tenant</p>
-                <p><kbd className="dark:bg-slate-700 bg-slate-200 px-1.5 py-0.5 rounded text-xs">Ctrl+A</kbd> Select all visible</p>
-                <p><kbd className="dark:bg-slate-700 bg-slate-200 px-1.5 py-0.5 rounded text-xs">Ctrl+Enter</kbd> Send reminders</p>
-                <p><kbd className="dark:bg-slate-700 bg-slate-200 px-1.5 py-0.5 rounded text-xs">Esc</kbd> Deselect all</p>
-              </div>
-            )}
-
             {/* Dropdowns Row */}
-            <div className="flex gap-2 items-center justify-between flex-wrap">
-              <div className="flex gap-2">
-                <Select value={filter} onValueChange={(value: FilterType) => setFilter(value)}>
-                  <SelectTrigger className="w-[110px] text-sm dark:bg-slate-800 dark:border-slate-700 bg-white border-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                    <SelectItem value="due_today">Due Today</SelectItem>
-                    <SelectItem value="due_week">This Week</SelectItem>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="grid grid-cols-2 lg:flex lg:gap-2 gap-2 items-center">
+              <Select value={filter} onValueChange={(value: FilterType) => setFilter(value)}>
+                <SelectTrigger className="text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="due_today">Due Today</SelectItem>
+                  <SelectItem value="due_week">This Week</SelectItem>
+                  <SelectItem value="upcoming">Upcoming</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
 
-                <Select value={floorFilter.toString()} onValueChange={(value) => setFloorFilter(value === "all" ? "all" : parseInt(value) as 1 | 2)}>
-                  <SelectTrigger className="w-[110px] text-sm dark:bg-slate-800 dark:border-slate-700 bg-white border-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Floors</SelectItem>
-                    <SelectItem value="1">Floor 1</SelectItem>
-                    <SelectItem value="2">Floor 2</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Select value={floorFilter.toString()} onValueChange={(value) => setFloorFilter(value === "all" ? "all" : parseInt(value) as 1 | 2)}>
+                <SelectTrigger className="text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Floors</SelectItem>
+                  <SelectItem value="1">Floor 1</SelectItem>
+                  <SelectItem value="2">Floor 2</SelectItem>
+                </SelectContent>
+              </Select>
 
-                <Select value={sortBy} onValueChange={(value: SortType) => setSortBy(value)}>
-                  <SelectTrigger className="w-[110px] text-sm dark:bg-slate-800 dark:border-slate-700 bg-white border-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="urgency">By Urgency</SelectItem>
-                    <SelectItem value="due_date">By Due Date</SelectItem>
-                    <SelectItem value="name">By Name</SelectItem>
-                    <SelectItem value="amount">By Amount</SelectItem>
-                    <SelectItem value="room">By Room</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={sortBy} onValueChange={(value: SortType) => setSortBy(value)}>
+                <SelectTrigger className="text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="urgency">By Urgency</SelectItem>
+                  <SelectItem value="due_date">By Due Date</SelectItem>
+                  <SelectItem value="name">By Name</SelectItem>
+                  <SelectItem value="amount">By Amount</SelectItem>
+                  <SelectItem value="room">By Room</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div className="flex gap-3 items-center">
+              <div className="col-span-2 lg:col-span-1 flex gap-3 items-center justify-between lg:justify-end">
                 {isAnyFilterActive && (
                   <button
                     onClick={() => {
@@ -500,7 +476,7 @@ export default function RemindersPage() {
                     Clear filters
                   </button>
                 )}
-                <div className="text-xs dark:text-slate-400 text-slate-600 font-medium">
+                <div className="text-xs text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
                   {filteredAndSortedTenants.length} tenant{filteredAndSortedTenants.length !== 1 ? "s" : ""}
                 </div>
               </div>
@@ -509,29 +485,44 @@ export default function RemindersPage() {
 
           {/* Bulk Action Bar */}
           {selectedTenants.length > 0 && (
-            <div className="mb-4 p-3 dark:bg-blue-950/40 dark:border-blue-500/30 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-3">
-              <div className="text-sm font-medium">
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-slate-800/50 border-b-2 border-blue-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
                 <strong>{selectedTenants.length}</strong> tenant{selectedTenants.length !== 1 ? "s" : ""} selected
               </div>
-              <div className="flex gap-2 text-xs">
-                <button
-                  onClick={() => selectAll()}
-                  className="dark:text-blue-400 text-blue-600 hover:underline font-medium"
-                >
-                  Select all ({filteredAndSortedTenants.length})
-                </button>
-                <button
-                  onClick={() => setSelectedTenants([])}
-                  className="dark:text-blue-400 text-blue-600 hover:underline font-medium"
-                >
-                  Deselect all
-                </button>
+              <button
+                onClick={() => setSelectedTenants([])}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium text-left sm:text-right"
+              >
+                Deselect all
+              </button>
+            </div>
+          )}
+
+          {/* Tenant List Header Row */}
+          {filteredAndSortedTenants.length > 0 && (
+            <div className="sticky top-0 z-10 grid grid-cols-12 gap-3 px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <div className="col-span-1 flex items-center">
+                <Checkbox
+                  checked={selectedTenants.length === filteredAndSortedTenants.length && filteredAndSortedTenants.length > 0}
+                  onCheckedChange={selectAll}
+                  ref={(el) => {
+                    if (el && indeterminateCheckbox) {
+                      (el as any).indeterminate = true
+                    }
+                  }}
+                  className="shrink-0"
+                  title="Select all visible tenants"
+                />
               </div>
+              <div className="col-span-4">Name</div>
+              <div className="col-span-2 text-right">Due</div>
+              <div className="col-span-2 text-right">Amount</div>
+              <div className="col-span-3">Status</div>
             </div>
           )}
 
           {/* Tenant List */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2 pb-2">
+          <div className="flex-1 overflow-y-auto space-y-1 px-2">
             {filteredAndSortedTenants.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <AlertCircle className="h-12 w-12 dark:text-slate-500 text-slate-400 mb-3 opacity-50" />
@@ -552,160 +543,106 @@ export default function RemindersPage() {
                 )}
               </div>
             ) : (
+              <div className="flex items-center justify-center py-16 text-center px-4">
+                <p className="text-sm text-slate-600 dark:text-slate-400">No tenants match your filters.</p>
+              </div>
+            )}
+
+            {filteredAndSortedTenants.length > 0 && (
               <>
-                {groupedByFloor.map((group) => (
-                  <div key={group.floor}>
-                    {/* Floor Header */}
-                    <div className="sticky top-0 dark:bg-slate-900/95 bg-slate-50/95 backdrop-blur-sm px-3 py-2 border-b dark:border-slate-700 border-slate-200 -mx-2 mb-2 flex items-center justify-between">
-                      <p className="text-xs font-semibold dark:text-slate-400 text-slate-600 uppercase tracking-wider">
-                        Floor {group.floor} — {group.tenants.length} tenant{group.tenants.length !== 1 ? "s" : ""}
-                        {group.allPaid && <span className="text-emerald-600 dark:text-emerald-400 ml-2">✓ all paid</span>}
-                      </p>
+                {filteredAndSortedTenants.map((tenant) => {
+                  const isSelected = selectedTenants.includes(tenant.id)
+                  const { label: dueLabel, color: dueColor } = getRelativeDueDate(tenant.dueDate)
+                  const colors = getStatusColors(tenant.status)
+
+                  return (
+                    <div
+                      key={tenant.id}
+                      onClick={() => toggleTenant(tenant.id)}
+                      className={cn(
+                        "grid grid-cols-12 gap-3 px-4 py-2 rounded-lg border-l-4 transition-all cursor-pointer items-center",
+                        "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700",
+                        "hover:bg-slate-50 dark:hover:bg-slate-700/60",
+                        isSelected && `${colors.bgLight} dark:border-l-blue-500 border-l-blue-500`,
+                        !isSelected && colors.border,
+                        tenant.status === "paid" && "opacity-60"
+                      )}
+                    >
+                      {/* Checkbox */}
+                      <div className="col-span-1">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(e) => e.stopPropagation?.()}
+                          className="shrink-0"
+                          disabled={tenant.status === "paid"}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+
+                      {/* Name & Room */}
+                      <div className="col-span-4 min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">{tenant.name}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">Room {tenant.room}</p>
+                      </div>
+
+                      {/* Due Date */}
+                      <div className="col-span-2 text-right">
+                        <p className={cn("text-xs font-bold", dueColor)}>{dueLabel}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          {tenant.dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                        </p>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="col-span-2 text-right">
+                        <p className="font-bold text-sm text-slate-900 dark:text-slate-100">₹{tenant.amount.toLocaleString()}</p>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="col-span-3">
+                        <Badge className={cn("text-xs font-semibold", colors.badgeBg, colors.badgeText)}>
+                          {tenant.status === "due_today"
+                            ? "Due Today"
+                            : tenant.status === "due_week"
+                            ? "This Week"
+                            : tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1).replace("_", " ")}
+                        </Badge>
+                      </div>
                     </div>
-
-                    {/* Tenant Cards */}
-                    {group.tenants.map((tenant) => {
-                      const isSelected = selectedTenants.includes(tenant.id)
-                      const { label: dueLabel, color: dueColor, borderColor } = getRelativeDueDate(tenant.dueDate)
-                      const colors = getStatusColors(tenant.status)
-
-                      return (
-                        <div key={tenant.id}>
-                          {markingPaid === tenant.id && (
-                            <div className="mb-2 p-3 dark:bg-amber-950/40 dark:border-amber-500/30 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
-                              <p className="text-sm dark:text-amber-200 text-amber-900">
-                                Mark <strong>{tenant.name}</strong> as paid for this month?
-                              </p>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setMarkingPaid(null)}
-                                  className="text-xs"
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="text-xs dark:bg-emerald-600 dark:hover:bg-emerald-700 bg-emerald-600 hover:bg-emerald-700"
-                                  onClick={() => markAsPaid(tenant.id)}
-                                >
-                                  <Check className="h-3 w-3 mr-1" />
-                                  Confirm
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                          <div
-                            className={cn(
-                              "flex items-center gap-3 px-4 py-3 rounded-lg border-l-4 transition-all cursor-pointer group",
-                              "dark:border-slate-700 border-slate-200 dark:hover:bg-slate-800/60 hover:bg-slate-100/60",
-                              isSelected && `${colors.bgLight} dark:border-l-blue-500 border-l-blue-400`,
-                              !isSelected && `${colors.bg} ${colors.border}`,
-                              tenant.status === "paid" && "opacity-70"
-                            )}
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleTenant(tenant.id)}
-                              className="shrink-0"
-                              disabled={tenant.status === "paid"}
-                            />
-
-                            {/* Avatar */}
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full dark:bg-slate-700 bg-slate-200 text-xs font-bold shrink-0 dark:text-slate-100 text-slate-900">
-                              {tenant.name.split(" ").map((n) => n[0]).join("")}
-                            </div>
-
-                            {/* Name & Room */}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm dark:text-slate-100 text-slate-900">{tenant.name}</p>
-                              <p className="text-xs dark:text-slate-400 text-slate-600">Room {tenant.room}</p>
-                            </div>
-
-                            {/* Due Date */}
-                            <div className="flex flex-col items-end gap-0.5">
-                              <p className={cn("text-xs font-bold", dueColor)}>{dueLabel}</p>
-                              <p className="text-xs dark:text-slate-400 text-slate-600">
-                                {tenant.dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
-                              </p>
-                            </div>
-
-                            {/* Amount */}
-                            <div className="text-right shrink-0 min-w-[75px]">
-                              <p className="font-bold text-sm dark:text-slate-100 text-slate-900">₹{tenant.amount.toLocaleString()}</p>
-                            </div>
-
-                            {/* Status Badge */}
-                            <Badge className={cn("shrink-0 text-xs font-semibold", colors.badgeBg, colors.badgeText)}>
-                              {tenant.status === "due_today"
-                                ? "Due Today"
-                                : tenant.status === "due_week"
-                                ? "This Week"
-                                : tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1).replace("_", " ")}
-                            </Badge>
-
-                            {/* Hover Actions */}
-                            {tenant.status !== "paid" && (
-                              <div className="hidden group-hover:flex gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setSelectedTenants([tenant.id])
-                                  }}
-                                  className="px-2.5 py-1.5 text-xs font-medium dark:bg-green-600 dark:hover:bg-green-700 bg-green-600 hover:bg-green-700 text-white rounded flex items-center gap-1.5 transition-colors"
-                                  title="Send reminder to this tenant"
-                                >
-                                  <MessageCircle className="h-3.5 w-3.5" />
-                                  Send reminder
-                                </button>
-                                <button
-                                  onClick={() => setMarkingPaid(tenant.id)}
-                                  className="px-2.5 py-1.5 text-xs font-medium dark:bg-blue-600 dark:hover:bg-blue-700 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1.5 transition-colors"
-                                  title="Mark as paid this month"
-                                >
-                                  <Check className="h-3.5 w-3.5" />
-                                  Mark paid
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
+                  )
+                })}
               </>
             )}
           </div>
         </div>
 
-        {/* Right Panel: WhatsApp Composer (35%, Sticky) */}
-        <div className="w-[35%] flex flex-col dark:bg-slate-800 dark:border-slate-700 bg-white border-slate-200 border rounded-lg overflow-hidden sticky top-0 h-[calc(100vh-100px)]">
+        {/* Right Panel: WhatsApp Composer */}
+        <div className="w-full lg:w-[35%] flex flex-col bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 border rounded-lg overflow-hidden lg:sticky lg:top-0 lg:h-[calc(100vh-100px)]">
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header */}
-            <div className="p-4 dark:border-slate-700 border-slate-200 border-b dark:bg-slate-900 bg-slate-50">
+            <div className="p-4 border-slate-200 dark:border-slate-700 border-b bg-white dark:bg-slate-900">
               <div className="flex items-center gap-2 mb-2">
                 <MessageCircle className="h-5 w-5 text-green-500" />
-                <h2 className="font-bold text-lg dark:text-slate-100 text-slate-900">WhatsApp Reminder</h2>
+                <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">WhatsApp Reminder</h2>
               </div>
               {selectedTenants.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-xs dark:text-slate-400 text-slate-600">Sending to {selectedTenants.length}:</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">Sending to {selectedTenants.length}:</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     {selectedTenantsData.slice(0, 3).map((tenant) => (
                       <div key={tenant.id} className="relative">
-                        <div className="h-6 w-6 rounded-full dark:bg-slate-700 bg-slate-200 flex items-center justify-center text-xs font-bold dark:text-slate-100 text-slate-900">
+                        <div className="h-6 w-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-900 dark:text-slate-100">
                           {tenant.name.split(" ").map((n) => n[0]).join("")}
                         </div>
                       </div>
                     ))}
                     {selectedTenants.length > 3 && (
-                      <span className="text-xs dark:text-slate-400 text-slate-600 font-medium">+{selectedTenants.length - 3} more</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">+{selectedTenants.length - 3} more</span>
                     )}
                   </div>
                 </div>
               ) : (
-                <p className="text-xs dark:text-slate-400 text-slate-600">No tenants selected</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">No tenants selected</p>
               )}
             </div>
 
@@ -714,20 +651,20 @@ export default function RemindersPage() {
               {/* Selected Recipients Pills */}
               {selectedTenants.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold dark:text-slate-300 text-slate-700 uppercase">Recipients</p>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Recipients</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedTenantsData.map((tenant) => (
                       <div
                         key={tenant.id}
-                        className="flex items-center gap-1.5 dark:bg-slate-700 dark:border-slate-600 bg-slate-100 border border-slate-200 rounded-full pl-2.5 pr-1.5 py-1 text-xs"
+                        className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full pl-2.5 pr-1.5 py-1 text-xs"
                       >
-                        <span className="font-medium dark:text-slate-100 text-slate-900">{tenant.name}</span>
+                        <span className="font-medium text-slate-900 dark:text-slate-100">{tenant.name}</span>
                         <button
                           onClick={() => toggleTenant(tenant.id)}
-                          className="p-0.5 dark:hover:bg-slate-600 hover:bg-slate-200 rounded-full transition-colors"
+                          className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full transition-colors"
                           title="Remove from selection"
                         >
-                          <X className="h-3 w-3 dark:text-slate-300 text-slate-700" />
+                          <X className="h-3 w-3 text-slate-700 dark:text-slate-300" />
                         </button>
                       </div>
                     ))}
@@ -737,12 +674,12 @@ export default function RemindersPage() {
 
               {/* Template Selector */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase dark:text-slate-300 text-slate-700">Template</Label>
+                <Label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Template</Label>
                 <Select
                   value={messageType}
                   onValueChange={(value: "friendly" | "firm" | "final" | "custom") => setMessageType(value)}
                 >
-                  <SelectTrigger className="text-sm dark:bg-slate-700 dark:border-slate-600 bg-slate-50 border-slate-200">
+                  <SelectTrigger className="text-sm bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -771,20 +708,20 @@ export default function RemindersPage() {
 
               {/* Message Composer */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase dark:text-slate-300 text-slate-700">Message</Label>
+                <Label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Message</Label>
                 {messageType === "custom" ? (
                   <Textarea
                     ref={textareaRef}
                     placeholder="Type your message. Use {name}, {amount}, {room}, {dueDate}"
                     value={customMessage}
                     onChange={(e) => setCustomMessage(e.target.value)}
-                    className="min-h-[100px] resize-none text-xs dark:bg-slate-700 dark:border-slate-600 bg-slate-50 border-slate-200"
+                    className="min-h-[80px] lg:min-h-[100px] resize-none text-xs bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600"
                   />
                 ) : (
                   <Textarea
                     value={getMessage(selectedTenantsData[0] || mockTenants[0])}
                     readOnly
-                    className="min-h-[100px] resize-none text-xs dark:bg-slate-700 dark:border-slate-600 bg-slate-50 border-slate-200 opacity-75"
+                    className="min-h-[80px] lg:min-h-[100px] resize-none text-xs bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 opacity-75"
                   />
                 )}
               </div>
@@ -792,7 +729,7 @@ export default function RemindersPage() {
               {/* Placeholder Tokens */}
               {messageType === "custom" && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase dark:text-slate-300 text-slate-700">Insert token:</p>
+                  <p className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Insert token:</p>
                   <div className="flex gap-1.5 flex-wrap">
                     {[
                       { code: "{name}", label: "name" },
@@ -803,7 +740,7 @@ export default function RemindersPage() {
                       <button
                         key={item.code}
                         onClick={() => insertToken(item.code)}
-                        className="flex items-center gap-1 px-2 py-1.5 text-xs font-mono dark:bg-slate-700 dark:border-slate-600 dark:text-blue-300 dark:hover:border-blue-500 bg-slate-100 border border-slate-300 text-blue-700 hover:border-blue-400 rounded transition-colors"
+                        className="flex items-center gap-1 px-2 py-1.5 text-xs font-mono bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-blue-700 dark:text-blue-300 hover:border-blue-400 dark:hover:border-blue-500 rounded transition-colors"
                         title={`Insert ${item.label} token`}
                       >
                         <Plus className="h-3 w-3" />
@@ -826,65 +763,37 @@ export default function RemindersPage() {
                   </button>
 
                   {selectedTenantsData.length > 0 ? (
-                    <div className="dark:bg-emerald-950/40 dark:border-emerald-900/50 bg-emerald-50 border border-emerald-200 rounded p-3 space-y-2">
-                      <p className="text-xs font-semibold dark:text-emerald-400 text-emerald-700 mb-2">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded p-3 space-y-2">
+                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
                         Preview for {selectedTenantsData[0].name}:
                       </p>
-                      <div className="dark:bg-emerald-700/60 bg-green-200 rounded-2xl rounded-tr-none p-3 text-xs dark:text-white text-slate-900 leading-relaxed text-right max-w-xs ml-auto">
+                      <div className="bg-green-200 dark:bg-emerald-700/60 rounded-2xl rounded-tr-none p-3 text-xs text-slate-900 dark:text-white leading-relaxed text-right max-w-xs ml-auto">
                         {getMessage(selectedTenantsData[0])}
                       </div>
                       <div className="text-right">
-                        <Check className="h-3 w-3 dark:text-emerald-400 text-emerald-700 inline ml-1" />
+                        <Check className="h-3 w-3 text-emerald-700 dark:text-emerald-400 inline ml-1" />
                       </div>
-                      <p className="text-xs dark:text-slate-400 text-slate-600 text-center mt-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 text-center mt-2">
                         Uses first selected tenant&apos;s data
                       </p>
                     </div>
                   ) : (
-                    <div className="dark:bg-slate-700/50 bg-slate-100 rounded p-3 text-xs dark:text-slate-400 text-slate-600 text-center">
+                    <div className="bg-slate-100 dark:bg-slate-700/50 rounded p-3 text-xs text-slate-600 dark:text-slate-400 text-center">
                       Select tenants to preview message
                     </div>
                   )}
                 </div>
               )}
-
-              {/* Schedule Toggle */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 dark:bg-slate-700 bg-slate-50 rounded-lg">
-                  <span className="text-xs font-medium dark:text-slate-200 text-slate-900">When to send?</span>
-                  <button
-                    onClick={() => setSchedule(!schedule)}
-                    className={cn(
-                      "relative h-5 w-10 rounded-full transition-colors",
-                      schedule ? "dark:bg-blue-600 bg-blue-600" : "dark:bg-slate-600 bg-slate-300"
-                    )}
-                  >
-                    <div className={cn(
-                      "h-4 w-4 rounded-full bg-white absolute top-0.5 transition-transform",
-                      schedule ? "translate-x-5" : "translate-x-0.5"
-                    )} />
-                  </button>
-                </div>
-
-                {schedule && (
-                  <Input
-                    type="datetime-local"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    className="text-xs dark:bg-slate-700 dark:border-slate-600 bg-slate-50 border-slate-200"
-                  />
-                )}
-              </div>
             </div>
 
             {/* Send Button */}
-            <div className="p-4 dark:border-slate-700 dark:bg-slate-900 border-slate-200 bg-slate-50 border-t space-y-2">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 space-y-2">
               <Button
                 className={cn(
-                  "w-full transition-all",
+                  "w-full lg:h-auto h-12 transition-all",
                   selectedTenants.length === 0
-                    ? "dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 bg-slate-300 text-slate-600 hover:bg-slate-300 cursor-not-allowed opacity-50"
-                    : "dark:bg-emerald-600 dark:hover:bg-emerald-700 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    ? "bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 cursor-not-allowed opacity-50"
+                    : "bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white"
                 )}
                 disabled={selectedTenants.length === 0}
                 onClick={sendReminders}
@@ -892,31 +801,31 @@ export default function RemindersPage() {
                 <Send className="mr-2 h-4 w-4" />
                 {selectedTenants.length === 0 ? "Select tenants to send" : `Send to ${selectedTenants.length} →`}
               </Button>
-              <p className="text-xs dark:text-slate-400 text-slate-600 text-center">
+              <p className="text-xs text-slate-600 dark:text-slate-400 text-center">
                 Messages will open in WhatsApp Web
               </p>
             </div>
 
             {/* Recent Activity */}
             {sentLog.length > 0 && (
-              <div className="dark:border-slate-700 border-slate-200 border-t">
+              <div className="border-t border-slate-200 dark:border-slate-700">
                 <button
                   onClick={() => setShowActivity(!showActivity)}
-                  className="w-full p-3 dark:hover:bg-slate-900 hover:bg-slate-50 flex items-center justify-between transition-colors"
+                  className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-900 flex items-center justify-between transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 dark:text-slate-400 text-slate-600" />
-                    <p className="text-xs font-semibold dark:text-slate-300 text-slate-700">Recent Activity</p>
+                    <Clock className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Recent Activity</p>
                   </div>
-                  <ChevronDown className={cn("h-4 w-4 transition-transform dark:text-slate-400 text-slate-600", showActivity && "rotate-180")} />
+                  <ChevronDown className={cn("h-4 w-4 transition-transform text-slate-600 dark:text-slate-400", showActivity && "rotate-180")} />
                 </button>
 
                 {showActivity && (
-                  <div className="p-3 dark:bg-slate-900 bg-slate-50 max-h-[240px] overflow-y-auto space-y-2 dark:border-t dark:border-slate-700 border-t border-slate-200">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 max-h-[240px] overflow-y-auto space-y-2 border-t border-slate-200 dark:border-slate-700">
                     {sentLog.map((log, idx) => (
-                      <div key={idx} className="text-xs dark:border-slate-700 dark:text-slate-300 border-slate-200 text-slate-700 border-l dark:pl-3 pl-3 py-1.5">
+                      <div key={idx} className="text-xs text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 border-l pl-3 py-1.5">
                         <p className="font-medium">{log.tenant}</p>
-                        <p className="dark:text-slate-400 text-slate-600 text-xs">
+                        <p className="text-slate-600 dark:text-slate-400 text-xs">
                           {log.template === "custom" ? "Custom" : log.template} template · {log.time.toLocaleTimeString("en-IN", {
                             hour: "2-digit",
                             minute: "2-digit",
