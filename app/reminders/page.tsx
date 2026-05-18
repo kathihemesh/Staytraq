@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -14,8 +15,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { MessageCircle, Send, AlertCircle, Search, Clock, ChevronDown, X, Check, Plus, HelpCircle, SmileIcon, AlertTriangle, AlertOctagon, Loader2 } from "lucide-react"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
+import {
+  MessageCircle,
+  Send,
+  Search,
+  Clock,
+  ChevronDown,
+  X,
+  Check,
+  Plus,
+  HelpCircle,
+  SmileIcon,
+  AlertTriangle,
+  AlertOctagon,
+  Phone,
+  CheckCircle2,
+  CalendarDays,
+  IndianRupee,
+  DoorOpen,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Tenant {
@@ -143,81 +162,47 @@ const messageTemplates = {
   custom: "",
 }
 
-function getRelativeDueDate(dueDate: Date): { label: string; color: string; borderColor: string } {
+const statusConfig = {
+  overdue: {
+    label: "Overdue",
+    colors: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+    bgMuted: "bg-red-50/50 dark:bg-red-950/20",
+    borderActive: "border-red-500 dark:border-red-500",
+  },
+  due_today: {
+    label: "Due Today",
+    colors: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
+    bgMuted: "bg-orange-50/50 dark:bg-orange-950/20",
+    borderActive: "border-orange-500 dark:border-orange-500",
+  },
+  due_week: {
+    label: "This Week",
+    colors: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    bgMuted: "bg-amber-50/50 dark:bg-amber-950/20",
+    borderActive: "border-amber-500 dark:border-amber-500",
+  },
+  upcoming: {
+    label: "Upcoming",
+    colors: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    bgMuted: "bg-blue-50/50 dark:bg-blue-950/20",
+    borderActive: "border-blue-500 dark:border-blue-500",
+  },
+  paid: {
+    label: "Paid",
+    colors: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    bgMuted: "bg-emerald-50/50 dark:bg-emerald-950/20",
+    borderActive: "border-emerald-500 dark:border-emerald-500",
+  },
+}
+
+function getRelativeDueDate(dueDate: Date) {
   const now = new Date()
   const daysUntil = Math.floor((dueDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
 
-  if (daysUntil < 0) {
-    return {
-      label: `${Math.abs(daysUntil)} days overdue`,
-      color: "dark:text-red-400 text-red-700",
-      borderColor: "dark:border-red-500 border-red-300",
-    }
-  } else if (daysUntil === 0) {
-    return { label: "Due today", color: "dark:text-amber-400 text-amber-700", borderColor: "dark:border-amber-500 border-amber-300" }
-  } else if (daysUntil <= 7) {
-    return { label: `Due in ${daysUntil} days`, color: "dark:text-yellow-400 text-yellow-700", borderColor: "dark:border-yellow-500 border-yellow-300" }
-  }
-  return { label: `Due in ${daysUntil} days`, color: "dark:text-slate-400 text-slate-500", borderColor: "dark:border-slate-500 border-slate-300" }
-}
-
-function getStatusColors(status: string): { bg: string; text: string; border: string; bgLight: string; badgeBg: string; badgeText: string } {
-  switch (status) {
-    case "overdue":
-      return {
-        bg: "dark:bg-red-600 bg-red-50",
-        text: "dark:text-red-200 text-red-900",
-        border: "dark:border-l-red-500 border-l-red-400",
-        bgLight: "dark:bg-red-950 bg-red-100",
-        badgeBg: "dark:bg-red-600 bg-red-100",
-        badgeText: "dark:text-red-100 text-red-900",
-      }
-    case "due_today":
-      return {
-        bg: "dark:bg-amber-600 bg-amber-50",
-        text: "dark:text-amber-200 text-amber-900",
-        border: "dark:border-l-amber-500 border-l-amber-400",
-        bgLight: "dark:bg-amber-950 bg-amber-100",
-        badgeBg: "dark:bg-amber-500 bg-amber-100",
-        badgeText: "dark:text-amber-100 text-amber-900",
-      }
-    case "due_week":
-      return {
-        bg: "dark:bg-yellow-600 bg-yellow-50",
-        text: "dark:text-yellow-200 text-yellow-900",
-        border: "dark:border-l-yellow-500 border-l-yellow-400",
-        bgLight: "dark:bg-yellow-950 bg-yellow-100",
-        badgeBg: "dark:bg-yellow-500 bg-yellow-100",
-        badgeText: "dark:text-yellow-100 text-yellow-900",
-      }
-    case "upcoming":
-      return {
-        bg: "dark:bg-blue-600 bg-blue-50",
-        text: "dark:text-blue-200 text-blue-900",
-        border: "dark:border-l-blue-500 border-l-blue-400",
-        bgLight: "dark:bg-blue-950 bg-blue-100",
-        badgeBg: "dark:bg-blue-600 bg-blue-100",
-        badgeText: "dark:text-blue-100 text-blue-900",
-      }
-    case "paid":
-      return {
-        bg: "dark:bg-emerald-600 bg-emerald-50",
-        text: "dark:text-emerald-200 text-emerald-900",
-        border: "dark:border-l-emerald-500 border-l-emerald-400",
-        bgLight: "dark:bg-emerald-950 bg-emerald-100",
-        badgeBg: "dark:bg-emerald-600 bg-emerald-100",
-        badgeText: "dark:text-emerald-100 text-emerald-900",
-      }
-    default:
-      return {
-        bg: "dark:bg-slate-600 bg-slate-50",
-        text: "dark:text-slate-200 text-slate-900",
-        border: "dark:border-l-slate-500 border-l-slate-400",
-        bgLight: "dark:bg-slate-950 bg-slate-100",
-        badgeBg: "dark:bg-slate-600 bg-slate-100",
-        badgeText: "dark:text-slate-100 text-slate-900",
-      }
-  }
+  if (daysUntil < 0) return { label: `${Math.abs(daysUntil)} days overdue`, isUrgent: true }
+  if (daysUntil === 0) return { label: "Due today", isUrgent: true }
+  if (daysUntil <= 7) return { label: `Due in ${daysUntil} days`, isUrgent: false }
+  return { label: `Due in ${daysUntil} days`, isUrgent: false }
 }
 
 export default function RemindersPage() {
@@ -230,76 +215,48 @@ export default function RemindersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [showPreview, setShowPreview] = useState(true)
   const [showActivity, setShowActivity] = useState(false)
-  const [showShortcuts, setShowShortcuts] = useState(false)
-  const [schedule, setSchedule] = useState(false)
-  const [markingPaid, setMarkingPaid] = useState<number | null>(null)
-  const [scheduledDate, setScheduledDate] = useState("")
+  const [isMobileComposerOpen, setIsMobileComposerOpen] = useState(false)
   const [sentLog, setSentLog] = useState<Array<{ id: number; tenant: string; template: string; time: Date }>>([])
+  
+  const [isMounted, setIsMounted] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const filteredAndSortedTenants = useMemo(() => {
     let filtered = mockTenants.filter((t) => {
-      const matchesStatusFilter = filter === "all" || t.status === filter
-      const matchesFloorFilter = floorFilter === "all" || t.floor === floorFilter
+      const matchesStatus = filter === "all" || t.status === filter
+      const matchesFloor = floorFilter === "all" || t.floor === floorFilter
       const matchesSearch =
         t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.room.toLowerCase().includes(searchTerm.toLowerCase())
-      return matchesStatusFilter && matchesFloorFilter && matchesSearch
+      return matchesStatus && matchesFloor && matchesSearch
     })
 
-    const sortOrder: Record<string, number> = {
-      overdue: 0,
-      due_today: 1,
-      due_week: 2,
-      upcoming: 3,
-      paid: 4,
-    }
+    const sortOrder: Record<string, number> = { overdue: 0, due_today: 1, due_week: 2, upcoming: 3, paid: 4 }
 
     filtered.sort((a, b) => {
-      if (sortBy === "urgency") {
-        return sortOrder[a.status] - sortOrder[b.status]
-      } else if (sortBy === "due_date") {
-        return a.dueDate.getTime() - b.dueDate.getTime()
-      } else if (sortBy === "name") {
-        return a.name.localeCompare(b.name)
-      } else if (sortBy === "amount") {
-        return b.amount - a.amount
-      } else if (sortBy === "room") {
-        return a.room.localeCompare(b.room)
-      }
+      if (sortBy === "urgency") return sortOrder[a.status] - sortOrder[b.status]
+      if (sortBy === "due_date") return a.dueDate.getTime() - b.dueDate.getTime()
+      if (sortBy === "name") return a.name.localeCompare(b.name)
+      if (sortBy === "amount") return b.amount - a.amount
+      if (sortBy === "room") return a.room.localeCompare(b.room)
       return 0
     })
 
     return filtered
   }, [filter, floorFilter, sortBy, searchTerm])
 
-  const groupedByFloor = useMemo(() => {
-    const groups: Record<number, Tenant[]> = {}
-    filteredAndSortedTenants.forEach((tenant) => {
-      if (!groups[tenant.floor]) groups[tenant.floor] = []
-      groups[tenant.floor].push(tenant)
-    })
-    return Object.entries(groups).map(([floor, tenants]) => ({
-      floor: parseInt(floor),
-      tenants,
-      allPaid: tenants.every((t) => t.status === "paid"),
-    }))
-  }, [filteredAndSortedTenants])
-
-  const stats = useMemo(() => {
-    return {
-      overdue: mockTenants.filter((t) => t.status === "overdue").length,
-      due_week: mockTenants.filter((t) => t.status === "due_today" || t.status === "due_week").length,
-      paid: mockTenants.filter((t) => t.status === "paid").length,
-    }
-  }, [])
-
-  const indeterminateCheckbox = selectedTenants.length > 0 && selectedTenants.length < filteredAndSortedTenants.length
+  const stats = useMemo(() => ({
+    overdue: mockTenants.filter((t) => t.status === "overdue").length,
+    due_week: mockTenants.filter((t) => t.status === "due_today" || t.status === "due_week").length,
+    paid: mockTenants.filter((t) => t.status === "paid").length,
+  }), [])
 
   const toggleTenant = (id: number) => {
-    setSelectedTenants((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
-    )
+    setSelectedTenants((prev) => prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id])
   }
 
   const selectAll = () => {
@@ -312,26 +269,19 @@ export default function RemindersPage() {
 
   const sendReminders = () => {
     if (selectedTenants.length === 0) return
-
     const selectedTenantsData = mockTenants.filter((t) => selectedTenants.includes(t.id))
-    selectedTenantsData.forEach((tenant) => {
-      setSentLog((prev) => [
-        {
-          id: tenant.id,
-          tenant: `${tenant.name} (${tenant.room})`,
-          template: messageType === "custom" ? "Custom" : messageType,
-          time: new Date(),
-        },
-        ...prev.slice(0, 4),
-      ])
-    })
+    
+    setSentLog((prev) => [
+      ...selectedTenantsData.map(t => ({
+        id: t.id,
+        tenant: `${t.name} (${t.room})`,
+        template: messageType === "custom" ? "Custom" : messageType,
+        time: new Date(),
+      })),
+      ...prev
+    ].slice(0, 5))
 
     setSelectedTenants([])
-  }
-
-  const markAsPaid = (tenantId: number) => {
-    setMarkingPaid(null)
-    // In a real app, this would update the database
   }
 
   const insertToken = (token: string) => {
@@ -341,13 +291,17 @@ export default function RemindersPage() {
     const text = customMessage
     const newText = text.substring(0, start) + token + text.substring(end)
     setCustomMessage(newText)
+    setTimeout(() => {
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(start + token.length, start + token.length)
+    }, 0)
   }
 
   const getMessage = (tenant: Tenant) => {
     const template = messageType === "custom" ? customMessage : messageTemplates[messageType]
     return template
       .replace("{name}", tenant.name.split(" ")[0])
-      .replace("{amount}", `₹${tenant.amount.toLocaleString()}`)
+      .replace("{amount}", tenant.amount.toLocaleString())
       .replace("{room}", tenant.room)
       .replace("{dueDate}", tenant.dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" }))
   }
@@ -355,485 +309,468 @@ export default function RemindersPage() {
   const selectedTenantsData = mockTenants.filter((t) => selectedTenants.includes(t.id))
   const isAnyFilterActive = filter !== "all" || floorFilter !== "all" || searchTerm !== "" || sortBy !== "urgency"
 
-  return (
-    <DashboardLayout title="Reminders">
-      <div className="min-h-[calc(100vh-100px)] flex flex-col lg:flex-row lg:gap-4 gap-0 overflow-x-hidden">
-        {/* Left Panel: Tenant List */}
-        <div className="flex-1 flex flex-col overflow-hidden lg:h-[calc(100vh-100px)]">
-          {/* Header with Quick Filter Pills */}
-          <div className="mb-5">
-            <h1 className="text-2xl lg:text-3xl font-bold mb-4">Reminders</h1>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setFilter("overdue")}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border",
-                  filter === "overdue"
-                    ? "bg-red-100 border-red-300 text-red-900 dark:bg-transparent dark:border-red-500 dark:text-red-400"
-                    : "bg-transparent border-red-200 text-red-700 hover:bg-red-50 dark:border-red-500/30 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-500/10"
-                )}
-              >
-                {stats.overdue} overdue
-              </button>
-              <button
-                onClick={() => setFilter("due_week")}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border",
-                  filter === "due_week"
-                    ? "bg-yellow-100 border-yellow-300 text-yellow-900 dark:bg-transparent dark:border-yellow-500 dark:text-yellow-400"
-                    : "bg-transparent border-yellow-200 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-500/30 dark:bg-transparent dark:text-yellow-400 dark:hover:bg-yellow-500/10"
-                )}
-              >
-                {stats.due_week} this week
-              </button>
-              <button
-                onClick={() => setFilter("paid")}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border",
-                  filter === "paid"
-                    ? "bg-emerald-100 border-emerald-300 text-emerald-900 dark:bg-transparent dark:border-emerald-500 dark:text-emerald-400"
-                    : "bg-transparent border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-transparent dark:text-emerald-400 dark:hover:bg-emerald-500/10"
-                )}
-              >
-                {stats.paid} paid
-              </button>
-            </div>
+  const composerContent = (
+    <div className="flex flex-col min-h-0 h-full bg-white dark:bg-slate-900 w-full">
+      {/* Composer Header */}
+      <div className="p-5 border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+            <MessageCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-
-          {/* Filter & Search Bar */}
-          <div className="mb-4 space-y-3">
-            {/* Search Row */}
-            <div className="flex gap-2 items-center flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                <Input
-                  placeholder="Search by name or room..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                />
-              </div>
-              <button
-                onClick={() => setShowShortcuts(!showShortcuts)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
-                title="Keyboard shortcuts"
-              >
-                <HelpCircle className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-              </button>
-            </div>
-
-            {/* Dropdowns Row */}
-            <div className="grid grid-cols-2 lg:flex lg:gap-2 gap-2 items-center">
-              <Select value={filter} onValueChange={(value: FilterType) => setFilter(value)}>
-                <SelectTrigger className="text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="due_today">Due Today</SelectItem>
-                  <SelectItem value="due_week">This Week</SelectItem>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={floorFilter.toString()} onValueChange={(value) => setFloorFilter(value === "all" ? "all" : parseInt(value) as 1 | 2)}>
-                <SelectTrigger className="text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Floors</SelectItem>
-                  <SelectItem value="1">Floor 1</SelectItem>
-                  <SelectItem value="2">Floor 2</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={(value: SortType) => setSortBy(value)}>
-                <SelectTrigger className="text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="urgency">By Urgency</SelectItem>
-                  <SelectItem value="due_date">By Due Date</SelectItem>
-                  <SelectItem value="name">By Name</SelectItem>
-                  <SelectItem value="amount">By Amount</SelectItem>
-                  <SelectItem value="room">By Room</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="col-span-2 lg:col-span-1 flex gap-3 items-center justify-between lg:justify-end">
-                {isAnyFilterActive && (
-                  <button
-                    onClick={() => {
-                      setSearchTerm("")
-                      setFilter("all")
-                      setFloorFilter("all")
-                      setSortBy("urgency")
-                    }}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                  >
-                    Clear filters
-                  </button>
-                )}
-                <div className="text-xs text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
-                  {filteredAndSortedTenants.length} tenant{filteredAndSortedTenants.length !== 1 ? "s" : ""}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bulk Action Bar */}
-          {selectedTenants.length > 0 && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-slate-800/50 border-b-2 border-blue-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                <strong>{selectedTenants.length}</strong> tenant{selectedTenants.length !== 1 ? "s" : ""} selected
-              </div>
-              <button
-                onClick={() => setSelectedTenants([])}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium text-left sm:text-right"
-              >
-                Deselect all
-              </button>
-            </div>
-          )}
-
-          {/* Tenant List Header Row */}
-          {filteredAndSortedTenants.length > 0 && (
-            <div className="sticky top-0 z-10 grid grid-cols-12 gap-3 px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-              <div className="col-span-1 flex items-center">
-                <Checkbox
-                  checked={selectedTenants.length === filteredAndSortedTenants.length && filteredAndSortedTenants.length > 0}
-                  onCheckedChange={selectAll}
-                  ref={(el) => {
-                    if (el && indeterminateCheckbox) {
-                      (el as any).indeterminate = true
-                    }
-                  }}
-                  className="shrink-0"
-                  title="Select all visible tenants"
-                />
-              </div>
-              <div className="col-span-4">Name</div>
-              <div className="col-span-2 text-right">Due</div>
-              <div className="col-span-1 text-right">Amount</div>
-              <div className="col-span-4 text-right">Status</div>
-            </div>
-          )}
-
-          {/* Tenant List */}
-          <div className="flex-1 overflow-y-auto space-y-1 px-2">
-            {filteredAndSortedTenants.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <AlertCircle className="h-12 w-12 dark:text-slate-500 text-slate-400 mb-3 opacity-50" />
-                <p className="text-lg font-semibold dark:text-slate-200 text-slate-900 mb-1">All clear!</p>
-                <p className="text-sm dark:text-slate-400 text-slate-600">No tenants match your filters.</p>
-                {isAnyFilterActive && (
-                  <button
-                    onClick={() => {
-                      setSearchTerm("")
-                      setFilter("all")
-                      setFloorFilter("all")
-                      setSortBy("urgency")
-                    }}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-3 font-medium"
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                {filteredAndSortedTenants.map((tenant) => {
-                  const isSelected = selectedTenants.includes(tenant.id)
-                  const { label: dueLabel, color: dueColor } = getRelativeDueDate(tenant.dueDate)
-                  const colors = getStatusColors(tenant.status)
-
-                  return (
-                    <div
-                      key={tenant.id}
-                      onClick={() => toggleTenant(tenant.id)}
-                      className={cn(
-                        "grid grid-cols-12 gap-3 px-4 py-2 rounded-lg border-l-4 transition-all cursor-pointer items-center",
-                        "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700",
-                        "hover:bg-slate-50 dark:hover:bg-slate-700/60",
-                        isSelected && `${colors.bgLight} dark:border-l-blue-500 border-l-blue-500`,
-                        !isSelected && colors.border,
-                        tenant.status === "paid" && "opacity-60"
-                      )}
-                    >
-                      {/* Checkbox */}
-                      <div className="col-span-1">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={(e) => e.stopPropagation?.()}
-                          className="shrink-0"
-                          disabled={tenant.status === "paid"}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-
-                      {/* Name & Room */}
-                      <div className="col-span-4 min-w-0">
-                        <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">{tenant.name}</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Room {tenant.room}</p>
-                      </div>
-
-                      {/* Due Date */}
-                      <div className="col-span-2 text-right">
-                        <p className={cn("text-xs font-bold", dueColor)}>{dueLabel}</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                          {tenant.dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
-                        </p>
-                      </div>
-
-                      {/* Amount */}
-                      <div className="col-span-1 text-right">
-                        <p className="font-bold text-sm text-slate-900 dark:text-slate-100">₹{tenant.amount.toLocaleString()}</p>
-                      </div>
-
-                      {/* Status Badge */}
-                      <div className="col-span-4 text-right">
-                        <Badge className={cn("text-xs font-semibold", "bg-red-100 text-red-900", tenant.status === "due_today" && "bg-amber-100 text-amber-900", tenant.status === "due_week" && "bg-yellow-100 text-yellow-900", tenant.status === "upcoming" && "bg-blue-100 text-blue-900", tenant.status === "paid" && "bg-emerald-100 text-emerald-900")}>
-                          {tenant.status === "due_today"
-                            ? "Due Today"
-                            : tenant.status === "due_week"
-                            ? "This Week"
-                            : tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1).replace("_", " ")}
-                        </Badge>
-                      </div>
-                    </div>
-                  )
-                })}
-              </>
-            )}
+          <div>
+            <h2 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">Composer</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">WhatsApp Reminder</p>
           </div>
         </div>
 
-        {/* Right Panel: WhatsApp Composer */}
-        <div className="w-full lg:w-[35%] flex flex-col bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 border rounded-lg overflow-hidden lg:sticky lg:top-0 lg:h-[calc(100vh-100px)]">
-          <div className="flex flex-col h-full overflow-hidden">
-            {/* Header */}
-            <div className="p-4 border-slate-200 dark:border-slate-700 border-b bg-white dark:bg-slate-900">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageCircle className="h-5 w-5 text-green-500" />
-                <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">WhatsApp Reminder</h2>
-              </div>
-              {selectedTenants.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Sending to {selectedTenants.length}:</p>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {selectedTenantsData.slice(0, 3).map((tenant) => (
-                      <div key={tenant.id} className="relative">
-                        <div className="h-6 w-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-900 dark:text-slate-100">
-                          {tenant.name.split(" ").map((n) => n[0]).join("")}
-                        </div>
-                      </div>
-                    ))}
-                    {selectedTenants.length > 3 && (
-                      <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">+{selectedTenants.length - 3} more</span>
-                    )}
-                  </div>
+        {/* Recipients Visual */}
+        <div className="bg-white dark:bg-slate-950 rounded-xl p-3 border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-slate-500">Recipients ({selectedTenants.length})</p>
+            {selectedTenants.length > 0 && (
+              <button onClick={() => setSelectedTenants([])} className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 uppercase font-bold tracking-wider">
+                Clear All
+              </button>
+            )}
+          </div>
+          {selectedTenants.length > 0 ? (
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar">
+              {selectedTenantsData.map(t => (
+                <div key={t.id} className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full pl-2 pr-1 py-1 text-xs whitespace-nowrap">
+                  <span className="font-medium">{t.name.split(' ')[0]}</span>
+                  <button onClick={() => toggleTenant(t.id)} className="h-4 w-4 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500">
+                    <X className="h-2.5 w-2.5" />
+                  </button>
                 </div>
-              ) : (
-                <p className="text-xs text-slate-600 dark:text-slate-400">No tenants selected</p>
-              )}
+              ))}
             </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic">Select tenants from the list</p>
+          )}
+        </div>
+      </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Selected Recipients Pills */}
-              {selectedTenants.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">Recipients</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTenantsData.map((tenant) => (
-                      <div
-                        key={tenant.id}
-                        className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full pl-2.5 pr-1.5 py-1 text-xs"
-                      >
-                        <span className="font-medium text-slate-900 dark:text-slate-100">{tenant.name}</span>
-                        <button
-                          onClick={() => toggleTenant(tenant.id)}
-                          className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full transition-colors"
-                          title="Remove from selection"
-                        >
-                          <X className="h-3 w-3 text-slate-700 dark:text-slate-300" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      {/* Scrollable Form */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar min-h-0">
+        
+        <div className="space-y-3">
+          <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Message Template</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: "friendly", label: "Friendly", icon: SmileIcon, color: "text-emerald-500" },
+              { id: "firm", label: "Firm", icon: AlertTriangle, color: "text-amber-500" },
+              { id: "final", label: "Final", icon: AlertOctagon, color: "text-red-500" },
+              { id: "custom", label: "Custom", icon: Edit3Icon, color: "text-blue-500" },
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setMessageType(t.id as any)}
+                className={cn(
+                  "flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-200",
+                  messageType === t.id 
+                    ? "bg-slate-900 dark:bg-white border-slate-900 dark:border-white shadow-md text-white dark:text-slate-900" 
+                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                )}
+              >
+                <t.icon className={cn("h-5 w-5 mb-1.5", messageType !== t.id && t.color)} />
+                <span className="text-xs font-semibold">{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-              {/* Template Selector */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Template</Label>
-                <Select
-                  value={messageType}
-                  onValueChange={(value: "friendly" | "firm" | "final" | "custom") => setMessageType(value)}
+        {messageType === "custom" && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Variables</Label>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {["{name}", "{amount}", "{room}", "{dueDate}"].map((token) => (
+                <button
+                  key={token}
+                  onClick={() => insertToken(token)}
+                  className="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-xs font-mono font-medium transition-colors flex items-center gap-1"
                 >
-                  <SelectTrigger className="text-sm bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600">
-                    <SelectValue />
+                  <Plus className="h-3 w-3" /> {token}
+                </button>
+              ))}
+            </div>
+            <Textarea
+              ref={textareaRef}
+              placeholder="Type your message..."
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              className="min-h-[120px] rounded-xl bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 resize-none text-sm focus-visible:ring-emerald-500"
+            />
+          </motion.div>
+        )}
+
+        {/* Chat Bubble Preview */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Preview</Label>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">WhatsApp</span>
+          </div>
+          
+          <div className="bg-[#EFEAE2] dark:bg-[#0B141A] p-4 rounded-2xl flex flex-col relative overflow-hidden border border-slate-200 dark:border-slate-800">
+            {/* Chat background pattern mockup */}
+            <div className="absolute inset-0 opacity-10 dark:opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+            
+            <motion.div 
+              key={messageType + (selectedTenantsData[0]?.id || "none") + customMessage}
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className="relative bg-[#D9FDD3] dark:bg-[#005C4B] rounded-2xl rounded-tr-sm p-3 text-[13px] leading-relaxed text-[#111B21] dark:text-[#E9EDEF] max-w-[85%] self-end shadow-sm"
+            >
+              {/* Chat Tail SVG */}
+              <svg viewBox="0 0 8 13" width="8" height="13" className="absolute top-0 -right-2 text-[#D9FDD3] dark:text-[#005C4B]">
+                <path opacity=".13" d="M5.188 1H0v11.193l6.467-8.625C7.526 2.156 6.958 1 5.188 1z" />
+                <path fill="currentColor" d="M5.188 0H0v11.193l6.467-8.625C7.526 1.156 6.958 0 5.188 0z" />
+              </svg>
+
+              <div className="whitespace-pre-wrap font-sans">
+                {selectedTenantsData.length > 0 ? getMessage(selectedTenantsData[0]) : getMessage(mockTenants[0])}
+              </div>
+              
+              <div className="flex items-center justify-end gap-1 mt-1 -mb-1 opacity-70">
+                <span className="text-[10px]">{new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                <Check className="h-3 w-3" />
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Action Footer */}
+      <div className="p-5 border-t border-slate-100 dark:border-slate-800/50 bg-white dark:bg-slate-900 mt-auto shrink-0">
+        <Button
+          size="lg"
+          className={cn(
+            "w-full rounded-xl shadow-lg transition-all font-semibold",
+            selectedTenants.length === 0
+              ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 shadow-none hover:bg-slate-100 dark:hover:bg-slate-800"
+              : "bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-[#25D366]/20"
+          )}
+          disabled={selectedTenants.length === 0}
+          onClick={() => {
+            sendReminders()
+            setIsMobileComposerOpen(false)
+          }}
+        >
+          <Send className="mr-2 h-4 w-4" />
+          {selectedTenants.length === 0 ? "Select tenants" : `Send ${selectedTenants.length} Message${selectedTenants.length > 1 ? 's' : ''}`}
+        </Button>
+      </div>
+    </div>
+  )
+
+  if (!isMounted) return null
+
+  return (
+    <DashboardLayout title="Reminders">
+      <div className="min-h-[calc(100vh-100px)] flex flex-col xl:flex-row gap-6 p-2 lg:p-4">
+        
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 space-y-6">
+          
+          {/* Header & Quick Stats */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Reminders</h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Manage and send payment reminders to tenants.</p>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: "overdue", label: "Overdue", count: stats.overdue, color: "text-red-600 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 hover:bg-red-100" },
+                { id: "due_week", label: "This Week", count: stats.due_week, color: "text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100" },
+                { id: "paid", label: "Paid", count: stats.paid, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100" }
+              ].map((stat) => (
+                <button
+                  key={stat.id}
+                  onClick={() => setFilter(filter === stat.id ? "all" : stat.id as FilterType)}
+                  className={cn(
+                    "relative flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all duration-300 cursor-pointer overflow-hidden",
+                    filter === stat.id ? stat.color.split(' ')[0] + " ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 shadow-sm" : "text-slate-600 bg-white border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800",
+                    filter === stat.id && stat.color
+                  )}
+                >
+                  <span>{stat.label}</span>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded-full text-xs bg-black/5 dark:bg-white/10",
+                  )}>
+                    {stat.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex flex-col lg:flex-row gap-4 items-center">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search tenants or rooms..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 bg-slate-50 dark:bg-slate-900 border-none shadow-none focus-visible:ring-1 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-700 h-10 rounded-xl"
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 sm:flex sm:flex-nowrap gap-2 w-full lg:w-auto">
+                <Select value={filter} onValueChange={(v: FilterType) => setFilter(v)}>
+                  <SelectTrigger className="w-full sm:w-[140px] h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-none shadow-none focus:ring-1 focus:ring-slate-300 dark:focus:ring-slate-700 text-xs sm:text-sm px-2 sm:px-3">
+                    <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="friendly">
-                      <div className="flex items-center gap-2">
-                        <SmileIcon className="h-4 w-4" />
-                        Friendly Reminder
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="firm">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        Firm Notice
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="final">
-                      <div className="flex items-center gap-2">
-                        <AlertOctagon className="h-4 w-4" />
-                        Final Warning
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="custom">Custom message</SelectItem>
+                  <SelectContent className="rounded-xl shadow-xl">
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                    <SelectItem value="due_today">Due Today</SelectItem>
+                    <SelectItem value="due_week">This Week</SelectItem>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={floorFilter.toString()} onValueChange={(v) => setFloorFilter(v === "all" ? "all" : parseInt(v) as 1 | 2)}>
+                  <SelectTrigger className="w-full sm:w-[130px] h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-none shadow-none focus:ring-1 focus:ring-slate-300 dark:focus:ring-slate-700 text-xs sm:text-sm px-2 sm:px-3">
+                    <SelectValue placeholder="Floor" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-xl">
+                    <SelectItem value="all">All Floors</SelectItem>
+                    <SelectItem value="1">Floor 1</SelectItem>
+                    <SelectItem value="2">Floor 2</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={(v: SortType) => setSortBy(v)}>
+                  <SelectTrigger className="w-full sm:w-[140px] h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-none shadow-none focus:ring-1 focus:ring-slate-300 dark:focus:ring-slate-700 text-xs sm:text-sm px-2 sm:px-3">
+                    <SelectValue placeholder="Sort By" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-xl">
+                    <SelectItem value="urgency">Urgency</SelectItem>
+                    <SelectItem value="due_date">Due Date</SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="amount">Amount</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Message Composer */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Message</Label>
-                {messageType === "custom" ? (
-                  <Textarea
-                    ref={textareaRef}
-                    placeholder="Type your message. Use {name}, {amount}, {room}, {dueDate}"
-                    value={customMessage}
-                    onChange={(e) => setCustomMessage(e.target.value)}
-                    className="min-h-[80px] lg:min-h-[100px] resize-none text-xs bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600"
-                  />
-                ) : (
-                  <Textarea
-                    value={getMessage(selectedTenantsData[0] || mockTenants[0])}
-                    readOnly
-                    className="min-h-[80px] lg:min-h-[100px] resize-none text-xs bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 opacity-75"
-                  />
-                )}
-              </div>
-
-              {/* Placeholder Tokens */}
-              {messageType === "custom" && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Insert token:</p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {[
-                      { code: "{name}", label: "name" },
-                      { code: "{amount}", label: "amount" },
-                      { code: "{room}", label: "room" },
-                      { code: "{dueDate}", label: "dueDate" },
-                    ].map((item) => (
-                      <button
-                        key={item.code}
-                        onClick={() => insertToken(item.code)}
-                        className="flex items-center gap-1 px-2 py-1.5 text-xs font-mono bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-blue-700 dark:text-blue-300 hover:border-blue-400 dark:hover:border-blue-500 rounded transition-colors"
-                        title={`Insert ${item.label} token`}
-                      >
-                        <Plus className="h-3 w-3" />
-                        {item.code}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Live Preview */}
-              {showPreview && (
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setShowPreview(!showPreview)}
-                    className="w-full text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-between p-2"
-                  >
-                    <span className="uppercase font-semibold">Preview</span>
-                    <ChevronDown className={cn("h-4 w-4 transition-transform", showPreview && "rotate-180")} />
-                  </button>
-
-                  {selectedTenantsData.length > 0 ? (
-                    <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded p-3 space-y-2">
-                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
-                        Preview for {selectedTenantsData[0].name}:
-                      </p>
-                      <div className="bg-green-200 dark:bg-emerald-700/60 rounded-2xl rounded-tr-none p-3 text-xs text-slate-900 dark:text-white leading-relaxed text-right max-w-xs ml-auto">
-                        {getMessage(selectedTenantsData[0])}
-                      </div>
-                      <div className="text-right">
-                        <Check className="h-3 w-3 text-emerald-700 dark:text-emerald-400 inline ml-1" />
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 text-center mt-2">
-                        Uses first selected tenant&apos;s data
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-slate-100 dark:bg-slate-700/50 rounded p-3 text-xs text-slate-600 dark:text-slate-400 text-center">
-                      Select tenants to preview message
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
+          </div>
 
-            {/* Send Button */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 space-y-2">
-              <Button
-                className={cn(
-                  "w-full lg:h-auto h-12 transition-all",
-                  selectedTenants.length === 0
-                    ? "bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 cursor-not-allowed opacity-50"
-                    : "bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white"
-                )}
-                disabled={selectedTenants.length === 0}
-                onClick={sendReminders}
-              >
-                <Send className="mr-2 h-4 w-4" />
-                {selectedTenants.length === 0 ? "Select tenants to send" : `Send to ${selectedTenants.length} →`}
-              </Button>
-              <p className="text-xs text-slate-600 dark:text-slate-400 text-center">
-                Messages will open in WhatsApp Web
-              </p>
-            </div>
-
-            {/* Recent Activity */}
-            {sentLog.length > 0 && (
-              <div className="border-t border-slate-200 dark:border-slate-700">
-                <button
-                  onClick={() => setShowActivity(!showActivity)}
-                  className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-900 flex items-center justify-between transition-colors"
+          {/* Mobile Bottom Action Bar (Replaces floating pill) */}
+          <div className="xl:hidden">
+            <AnimatePresence>
+              {selectedTenants.length > 0 && (
+                <motion.div
+                  key="mobile-actions"
+                  initial={{ opacity: 0, y: 100 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 100 }}
+                  className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] rounded-t-3xl flex items-center justify-between"
                 >
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Recent Activity</p>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {selectedTenants.length} selected
+                    </span>
+                    <button onClick={() => setSelectedTenants([])} className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-left font-medium mt-0.5">
+                      Deselect all
+                    </button>
                   </div>
-                  <ChevronDown className={cn("h-4 w-4 transition-transform text-slate-600 dark:text-slate-400", showActivity && "rotate-180")} />
-                </button>
+                  <Button 
+                    onClick={() => setIsMobileComposerOpen(true)}
+                    className="bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl shadow-lg shadow-[#25D366]/20 font-semibold"
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Compose
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-                {showActivity && (
-                  <div className="p-3 bg-slate-50 dark:bg-slate-900 max-h-[240px] overflow-y-auto space-y-2 border-t border-slate-200 dark:border-slate-700">
-                    {sentLog.map((log, idx) => (
-                      <div key={idx} className="text-xs text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 border-l pl-3 py-1.5">
-                        <p className="font-medium">{log.tenant}</p>
-                        <p className="text-slate-600 dark:text-slate-400 text-xs">
-                          {log.template === "custom" ? "Custom" : log.template} template · {log.time.toLocaleTimeString("en-IN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+          {/* Tenant List */}
+          <div className="flex flex-col">
+            <div className="flex items-center px-2 sm:px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <div className="w-[40px] shrink-0">
+                <Checkbox
+                  checked={selectedTenants.length === filteredAndSortedTenants.length && filteredAndSortedTenants.length > 0}
+                  onCheckedChange={selectAll}
+                  className="rounded-md data-[state=checked]:bg-slate-900 dark:data-[state=checked]:bg-white data-[state=checked]:text-white dark:data-[state=checked]:text-slate-900"
+                />
               </div>
-            )}
+              <div className="flex-1 min-w-0 pr-2">Tenant</div>
+              <div className="w-[100px] text-right hidden sm:block">Amount</div>
+              <div className="w-[120px] md:w-[180px] text-right">Status</div>
+            </div>
+
+            <div className="relative pb-20">
+              <AnimatePresence initial={false}>
+                {filteredAndSortedTenants.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 border-dashed rounded-3xl"
+                  >
+                    <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                      <Search className="h-8 w-8 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No tenants found</h3>
+                    <p className="text-slate-500 dark:text-slate-400 max-w-sm">
+                      We couldn't find any tenants matching your current filters. Try adjusting your search criteria.
+                    </p>
+                    {isAnyFilterActive && (
+                      <Button
+                        variant="outline"
+                        className="mt-6 rounded-xl"
+                        onClick={() => {
+                          setSearchTerm("")
+                          setFilter("all")
+                          setFloorFilter("all")
+                          setSortBy("urgency")
+                        }}
+                      >
+                        Clear all filters
+                      </Button>
+                    )}
+                  </motion.div>
+                ) : (
+                  filteredAndSortedTenants.map((tenant) => {
+                    const isSelected = selectedTenants.includes(tenant.id)
+                    const { label: dueLabel, isUrgent } = getRelativeDueDate(tenant.dueDate)
+                    const conf = statusConfig[tenant.status]
+
+                    return (
+                      <motion.div
+                        layout
+                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        animate={{ opacity: 1, height: "auto", marginBottom: 12 }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        key={tenant.id}
+                        className="overflow-hidden"
+                      >
+                        <div
+                          onClick={() => toggleTenant(tenant.id)}
+                          className={cn(
+                            "group flex items-center px-2 sm:px-4 py-4 rounded-2xl border transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5",
+                            isSelected 
+                              ? `${conf.borderActive} ${conf.bgMuted} ring-1 ring-${conf.borderActive.split('-')[1]}-500/50` 
+                              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700",
+                            tenant.status === "paid" && "opacity-75"
+                          )}
+                        >
+                        <div className="w-[40px] shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleTenant(tenant.id)}
+                            disabled={tenant.status === "paid"}
+                            className="rounded-md data-[state=checked]:bg-slate-900 dark:data-[state=checked]:bg-white data-[state=checked]:text-white dark:data-[state=checked]:text-slate-900"
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-4 pr-2">
+                          <div className={cn(
+                            "hidden md:flex h-10 w-10 rounded-full items-center justify-center font-bold text-sm",
+                            isSelected ? "bg-white/50 dark:bg-black/20" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                          )}>
+                            {tenant.name.split(" ").map(n => n[0]).join("")}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-sm sm:text-base truncate">
+                              {tenant.name}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-xs text-slate-500 mt-1">
+                              <span className="flex items-center gap-1"><DoorOpen className="h-3 w-3" /> {tenant.room}</span>
+                              <span className="flex sm:hidden items-center gap-1">
+                                <IndianRupee className="h-2.5 w-2.5" /> {tenant.amount.toLocaleString()}
+                              </span>
+                              {tenant.status !== "paid" && (
+                                <span className={cn(
+                                  "flex md:hidden items-center gap-1",
+                                  isUrgent ? "text-red-500 dark:text-red-400" : ""
+                                )}>
+                                  <CalendarDays className="h-2.5 w-2.5" />
+                                  {dueLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="w-[100px] text-right hidden sm:flex flex-col items-end">
+                          <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1 text-sm">
+                            <IndianRupee className="h-3.5 w-3.5" />
+                            {tenant.amount.toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div className="w-[120px] md:w-[180px] flex flex-col items-end gap-1.5 shrink-0">
+                          <span className={cn(
+                            "px-2.5 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5",
+                            conf.colors
+                          )}>
+                            {conf.label}
+                          </span>
+                          {tenant.status !== "paid" && (
+                            <span className={cn(
+                              "text-[10px] sm:text-xs font-medium items-center gap-1 hidden md:flex",
+                              isUrgent ? "text-red-500 dark:text-red-400" : "text-slate-500"
+                            )}>
+                              <CalendarDays className="h-3 w-3" />
+                              {dueLabel}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      </motion.div>
+                    )
+                  })
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Composer Sheet */}
+        <Sheet open={isMobileComposerOpen} onOpenChange={setIsMobileComposerOpen}>
+          <SheetContent side="bottom" className="h-[90vh] p-0 rounded-t-[2rem] bg-white dark:bg-slate-900 border-none overflow-hidden">
+            {composerContent}
+          </SheetContent>
+        </Sheet>
+
+        {/* PC Composer Panel */}
+        <div className="hidden xl:flex xl:flex-col w-[400px] shrink-0">
+          <div className="sticky top-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 120px)', height: 'calc(100vh - 120px)' }}>
+            {composerContent}
           </div>
         </div>
       </div>
     </DashboardLayout>
+  )
+}
+
+// Extra icons used
+function Edit3Icon(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
   )
 }
