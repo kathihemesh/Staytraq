@@ -516,8 +516,8 @@ export default function RemindersPage() {
               </div>
               <div className="col-span-4">Name</div>
               <div className="col-span-2 text-right">Due</div>
-              <div className="col-span-2 text-right">Amount</div>
-              <div className="col-span-3">Status</div>
+              <div className="col-span-1 text-right">Amount</div>
+              <div className="col-span-4 text-right">Status</div>
             </div>
           )}
 
@@ -543,12 +543,6 @@ export default function RemindersPage() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center justify-center py-16 text-center px-4">
-                <p className="text-sm text-slate-600 dark:text-slate-400">No tenants match your filters.</p>
-              </div>
-            )}
-
-            {filteredAndSortedTenants.length > 0 && (
               <>
                 {filteredAndSortedTenants.map((tenant) => {
                   const isSelected = selectedTenants.includes(tenant.id)
@@ -594,13 +588,13 @@ export default function RemindersPage() {
                       </div>
 
                       {/* Amount */}
-                      <div className="col-span-2 text-right">
+                      <div className="col-span-1 text-right">
                         <p className="font-bold text-sm text-slate-900 dark:text-slate-100">₹{tenant.amount.toLocaleString()}</p>
                       </div>
 
                       {/* Status Badge */}
-                      <div className="col-span-3">
-                        <Badge className={cn("text-xs font-semibold", colors.badgeBg, colors.badgeText)}>
+                      <div className="col-span-4 text-right">
+                        <Badge className={cn("text-xs font-semibold", "bg-red-100 text-red-900", tenant.status === "due_today" && "bg-amber-100 text-amber-900", tenant.status === "due_week" && "bg-yellow-100 text-yellow-900", tenant.status === "upcoming" && "bg-blue-100 text-blue-900", tenant.status === "paid" && "bg-emerald-100 text-emerald-900")}>
                           {tenant.status === "due_today"
                             ? "Due Today"
                             : tenant.status === "due_week"
