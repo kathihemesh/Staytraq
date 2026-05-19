@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -100,7 +100,7 @@ interface Tenant {
 
 // --- COMPONENTS ---
 
-export default function TenantsPage() {
+function TenantsPageContent() {
   const { user } = useAuth()
   const supabase = createClient()
   const { toast } = useToast()
@@ -1675,5 +1675,13 @@ export default function TenantsPage() {
       </Dialog>
 
     </DashboardLayout>
+  )
+}
+
+export default function TenantsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TenantsPageContent />
+    </Suspense>
   )
 }
