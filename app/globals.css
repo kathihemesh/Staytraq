@@ -175,17 +175,14 @@ input[type=number] {
 
 .bg-maintenance-stripes {
   background-image: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.25) 25%,
-    transparent 25%,
-    transparent 50%,
-    rgba(255, 255, 255, 0.25) 50%,
-    rgba(255, 255, 255, 0.25) 75%,
-    transparent 75%,
-    transparent
+    -45deg,
+    rgba(217, 119, 6, 0.35) 0px,
+    rgba(217, 119, 6, 0.35) 8px,
+    rgba(251, 191, 36, 0.15) 8px,
+    rgba(251, 191, 36, 0.15) 16px
   ) !important;
-  background-size: 1rem 1rem !important;
-  animation: move-stripes 1s linear infinite !important;
+  background-size: 22.6px 22.6px !important;
+  animation: move-stripes 1.2s linear infinite !important;
 }
 
 @keyframes move-stripes {
@@ -193,6 +190,6 @@ input[type=number] {
     background-position: 0 0;
   }
   100% {
-    background-position: 1rem 0;
+    background-position: 22.6px 22.6px;
   }
 }

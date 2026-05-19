@@ -456,23 +456,24 @@ export default function RemindersPage() {
             
             <div className="flex flex-wrap gap-2 items-center">
               {[
-                { id: "overdue", label: "Overdue", count: stats.overdue, color: "text-red-600 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 hover:bg-red-100" },
-                { id: "due_week", label: "This Week", count: stats.due_week, color: "text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100" },
-                { id: "paid", label: "Paid", count: stats.paid, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100" }
+                { id: "overdue",  label: "Overdue",   count: stats.overdue,  text: "text-red-700 dark:text-red-400",     border: "border-red-300 dark:border-red-500/40",     bg: "bg-red-50 dark:bg-red-500/10" },
+                { id: "due_week", label: "This Week", count: stats.due_week, text: "text-amber-700 dark:text-amber-400", border: "border-amber-300 dark:border-amber-500/40", bg: "bg-amber-50 dark:bg-amber-500/10" },
+                { id: "paid",     label: "Paid",      count: stats.paid,     text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-300 dark:border-emerald-500/40", bg: "bg-emerald-50 dark:bg-emerald-500/10" }
               ].map((stat) => (
                 <button
                   key={stat.id}
                   onClick={() => setFilter(filter === stat.id ? "all" : stat.id as FilterType)}
                   className={cn(
-                    "relative flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all duration-300 cursor-pointer overflow-hidden",
-                    filter === stat.id ? stat.color.split(' ')[0] + " ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 shadow-sm" : "text-slate-600 bg-white border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800",
-                    filter === stat.id && stat.color
+                    "relative flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200 cursor-pointer",
+                    stat.text,
+                    stat.border,
+                    filter === stat.id
+                      ? stat.bg + " shadow-sm ring-1 ring-current/20 font-semibold"
+                      : "bg-white dark:bg-slate-900"
                   )}
                 >
                   <span>{stat.label}</span>
-                  <span className={cn(
-                    "px-2 py-0.5 rounded-full text-xs bg-black/5 dark:bg-white/10",
-                  )}>
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-current/10">
                     {stat.count}
                   </span>
                 </button>

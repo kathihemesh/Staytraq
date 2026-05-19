@@ -48,25 +48,27 @@ export default function DashboardPage() {
     try {
       if (hasLoadedOnce) setIsRefreshing(true)
 
-      const { data: tenants } = await runWithNetworkRetry(() =>
-        supabase
+      const { data: tenants } = await runWithNetworkRetry(async () => {
+        return await supabase
           .from("tenants_table")
           .select("id, name, status")
           .eq("owner_id", user.id)
-      )
+      })
 
       const activeTenants = tenants?.filter((t) => t.status === "active") || []
       setTotalTenants(activeTenants.length)
 
-      const tenantMap = new Map(tenants?.map((t) => [t.id, t.name]) || [])
+      const tenantMap = new Map<number, string>(
+        (tenants || []).map((t: any) => [t.id, t.name || ""])
+      )
       const tenantIds = (tenants?.map((t) => t.id) || []) as number[]
       tenantIdsRef.current = tenantIds
 
-      const { data: payments } = await runWithNetworkRetry(() =>
-        supabase.from("payments").select("*").eq("owner_id", user.id)
-      )
+      const { data: payments } = await runWithNetworkRetry(async () => {
+        return await supabase.from("payments").select("*").eq("owner_id", user.id)
+      })
 
-      const allPayments = payments || []
+      const allPayments = (payments || []) as any[]
 
       const now = new Date()
       const currentMonth = now.getMonth()
@@ -141,9 +143,9 @@ export default function DashboardPage() {
 
       let allReminders: any[] = []
       if (tenantIds.length > 0) {
-        const { data: reminders } = await runWithNetworkRetry(() =>
-          supabase.from("reminders").select("*").in("tenant_id", tenantIds)
-        )
+        const { data: reminders } = await runWithNetworkRetry(async () => {
+          return await supabase.from("reminders").select("*").in("tenant_id", tenantIds)
+        })
         allReminders = reminders || []
       }
 
