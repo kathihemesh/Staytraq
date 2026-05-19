@@ -17,6 +17,7 @@ const amountColors: Record<string, string> = {
   paid: "text-emerald-500",
   pending: "text-amber-500",
   late: "text-red-500",
+  submitted: "text-purple-500",
 };
 
 export function MobilePaymentCard({ payment, onCardClick, onMarkPaid, style }: MobilePaymentCardProps) {
@@ -56,7 +57,6 @@ export function MobilePaymentCard({ payment, onCardClick, onMarkPaid, style }: M
     <motion.div
       ref={setCardRef}
       style={style}
-      layout
       onClick={() => onCardClick(payment)}
       className="relative flex items-center gap-3 rounded-xl rounded-l-none border bg-card px-3 py-2.5 shadow-sm active:scale-[0.99] transition-transform cursor-pointer overflow-hidden"
     >

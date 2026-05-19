@@ -101,13 +101,12 @@ export function MobilePaymentList({
             animate="show"
             className="space-y-2"
           >
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence>
               {payments.map((payment) => (
                 <motion.div
                   key={payment.id}
                   variants={cardItemVariants}
                   exit={{ opacity: 0, y: -8 }}
-                  layout
                 >
                   <MobilePaymentCard
                     payment={payment}
@@ -164,9 +163,8 @@ export function MobilePaymentList({
             initial={{ y: 36, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 36, opacity: 0 }}
-            className="absolute bottom-0 left-0 right-0 h-9 z-20 flex items-center px-4 border-t border-[rgba(255,255,255,0.06)] pointer-events-none"
+            className="absolute bottom-0 left-0 right-0 h-9 z-20 flex items-center px-4 border-t border-border bg-background/90 pointer-events-none"
             style={{ 
-              backgroundColor: "rgba(15, 15, 15, 0.9)",
               backdropFilter: "blur(8px)",
               WebkitBackdropFilter: "blur(8px)",
               paddingBottom: "max(env(safe-area-inset-bottom), 0px)",

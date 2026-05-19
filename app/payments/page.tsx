@@ -262,7 +262,7 @@ export default function PaymentsPage() {
         <div className="flex flex-col h-full overflow-hidden">
           {/* Sticky header block */}
           <div
-            className="sticky top-0 z-20 flex flex-col bg-[#0a0a0a] px-4 pt-3 pb-2 border-b border-[rgba(255,255,255,0.06)]"
+            className="sticky top-0 z-20 flex flex-col bg-background/90 px-4 pt-3 pb-2 border-b border-border"
             style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}
           >
             {/* Page title */}
