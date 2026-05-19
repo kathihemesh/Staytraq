@@ -77,14 +77,14 @@ export default function OnboardingPage() {
     setError(null)
 
     try {
-      const { error: rpcError } = await runWithNetworkRetry(() =>
-        supabase.rpc("onboard_new_owner", {
+      const { error: rpcError } = await runWithNetworkRetry(async () => {
+        return await supabase.rpc("onboard_new_owner", {
           p_full_name: fullName.trim(),
           p_pg_name: pgName.trim(),
           p_address: address.trim(),
           p_city: city.trim(),
         })
-      )
+      })
 
       if (rpcError) throw rpcError
 

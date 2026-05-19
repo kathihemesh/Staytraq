@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,10 +100,12 @@ interface Tenant {
 
 // --- COMPONENTS ---
 
-export default function TenantsPage() {
+function TenantsPageContent() {
   const { user } = useAuth()
   const supabase = createClient()
   const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [rooms, setRooms] = useState<any[]>([])
@@ -140,6 +143,22 @@ export default function TenantsPage() {
   const activeTenant = tenants.find(t => t.id === viewTenantId) || null
   const movingOutTenant = tenants.find(t => t.id === moveOutTenantId) || null
   const changeRoomTenant = tenants.find(t => t.id === changeRoomTenantId) || null
+
+  // Auto-open sidebar from ?tenant=<id> query param
+  useEffect(() => {
+    const tenantParam = searchParams.get("tenant")
+    if (tenantParam && tenants.length > 0) {
+      const id = parseInt(tenantParam)
+      const found = tenants.find(t => t.id === id)
+      if (found) {
+        setViewTenantId(id)
+        // Clean URL without reload
+        const url = new URL(window.location.href)
+        url.searchParams.delete("tenant")
+        window.history.replaceState({}, "", url.toString())
+      }
+    }
+  }, [searchParams, tenants])
 
   // Form State for Add Tenant
   const [newTenantName, setNewTenantName] = useState("")
@@ -1656,5 +1675,13 @@ export default function TenantsPage() {
       </Dialog>
 
     </DashboardLayout>
+  )
+}
+
+export default function TenantsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TenantsPageContent />
+    </Suspense>
   )
 }
