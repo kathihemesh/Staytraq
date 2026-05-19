@@ -1,363 +1,381 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Search, Check, IndianRupee, Clock, AlertTriangle, Home, Calendar, Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/components/auth-provider"
+import { useIsMobile } from "@/lib/hooks/useIsMobile"
 
-interface Payment {
-  id: string
-  tenantName: string
-  roomNumber: string
-  amount: number
-  status: "paid" | "pending" | "late"
-  dueDate: string
-  paidDate?: string
-}
+// Desktop components
+import { SummaryCards } from "@/components/payments/SummaryCards"
+import { FilterBar } from "@/components/payments/FilterBar"
+import { PaymentsTable } from "@/components/payments/PaymentsTable"
+import { PaymentDrawer } from "@/components/payments/PaymentDrawer"
+
+// Mobile components
+import { MobileSummaryCards } from "@/components/payments/mobile/MobileSummaryCards"
+import { MobileFilterBar } from "@/components/payments/mobile/MobileFilterBar"
+import { MobilePaymentList } from "@/components/payments/mobile/MobilePaymentList"
+import { MobilePaymentDrawer } from "@/components/payments/mobile/MobilePaymentDrawer"
+
+import { ToastContainer, ToastItem } from "@/components/payments/Toast"
+import { usePaymentFilters, Payment } from "@/components/payments/usePaymentFilters"
 
 export default function PaymentsPage() {
   const { user } = useAuth()
   const supabase = createClient()
+  const isMobile = useIsMobile()
+
   const [payments, setPayments] = useState<Payment[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  useEffect(() => {
-    async function fetchPayments() {
-      if (!user?.id) return
-      setIsLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from("payments")
-          .select(`
-            id,
-            month,
-            year,
-            rent_amount,
-            extra_charges,
-            total_amount,
-            due_date,
-            status,
-            paid_at,
-            tenant_id,
-            tenants_table (
-              name,
-              rooms_table (
-                room_number
-              )
-            )
-          `)
-          .eq("owner_id", user.id)
-          .order("due_date", { ascending: false });
+  // Drawer state
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
-        if (error) throw error
+  // Toast state
+  const [toasts, setToasts] = useState<ToastItem[]>([])
 
-        const mappedPayments = (data || []).map((p: any) => ({
-          id: String(p.id),
-          tenantName: p.tenants_table?.name || "Unknown",
-          roomNumber: p.tenants_table?.rooms_table?.room_number || "—",
-          amount: Number(p.total_amount),
-          status: (p.status || "pending") as "paid" | "pending" | "late",
-          dueDate: p.due_date,
-          paidDate: p.paid_at ? p.paid_at.split("T")[0] : undefined,
-        }))
-
-        setPayments(mappedPayments)
-      } catch (err: any) {
-        console.error("Failed to load payments from Supabase:", err)
-      } finally {
-        setIsLoading(false)
-      }
+  const addToast = (type: ToastItem["type"], message: string) => {
+    const newToast: ToastItem = {
+      id: Math.random().toString(36).substring(2, 9),
+      type,
+      message,
     }
+    setToasts((prev) => [...prev, newToast])
+  }
 
-    fetchPayments()
-  }, [user?.id, supabase])
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }
 
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch =
-      payment.tenantName.toLowerCase().includes(search.toLowerCase()) ||
-      payment.roomNumber.includes(search)
-    const matchesStatus =
-      statusFilter === "all" || payment.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
-
-  const handleMarkPaid = async (id: string) => {
+  const fetchPayments = useCallback(async () => {
+    if (!user?.id) return
+    setIsLoading(true)
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("payments")
-        .update({
-          status: "paid",
-          paid_at: new Date().toISOString()
-        })
-        .eq("id", Number(id))
+        .select(`
+          id,
+          month,
+          year,
+          rent_amount,
+          extra_charges,
+          total_amount,
+          due_date,
+          status,
+          paid_at,
+          payment_token,
+          screenshot_path,
+          utr_number,
+          verification_notes,
+          tenant_id,
+          tenants_table (
+            name,
+            rooms_table (
+              room_number
+            )
+          )
+        `)
+        .eq("owner_id", user.id)
+        .order("due_date", { ascending: false })
 
       if (error) throw error
 
-      setPayments((prev) =>
-        prev.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                status: "paid" as const,
-                paidDate: new Date().toISOString().split("T")[0],
-              }
-            : p
-        )
+      const mappedPayments = (data || []).map((p: any) => {
+        const monthName =
+          typeof p.month === "number" || !isNaN(Number(p.month))
+            ? new Date(2000, Number(p.month) - 1).toLocaleString("en-US", { month: "long" })
+            : p.month
+
+        // Normalise tenant and room from potential array structure
+        const tenantRaw = p.tenants_table
+        const tenant = Array.isArray(tenantRaw) ? tenantRaw[0] : tenantRaw
+
+        const roomRaw = tenant?.rooms_table
+        const room = Array.isArray(roomRaw) ? roomRaw[0] : roomRaw
+
+        return {
+          id: String(p.id),
+          tenantName: tenant?.name || "Unknown",
+          roomNumber: room?.room_number || "—",
+          amount: Number(p.total_amount),
+          baseRent: Number(p.rent_amount) || 0,
+          extraCharges: Number(p.extra_charges) || 0,
+          status: (p.status || "pending") as "paid" | "pending" | "late" | "submitted",
+          dueDate: p.due_date,
+          paidDate: p.paid_at ? p.paid_at.split("T")[0] : undefined,
+          month: monthName,
+          year: p.year,
+          payment_token: p.payment_token ?? undefined,
+          screenshot_url: p.screenshot_path ?? undefined,
+          utr_number: p.utr_number ?? undefined,
+          verification_notes: p.verification_notes ?? undefined,
+        }
+      })
+
+      setPayments(mappedPayments)
+    } catch (err: any) {
+      console.error("Failed to load payments from Supabase:", err)
+      addToast("error", "Failed to load payments.")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user?.id, supabase])
+
+  useEffect(() => {
+    fetchPayments()
+  }, [fetchPayments])
+
+  // Filter Hook
+  const {
+    searchValue,
+    setSearchValue,
+    statusFilter,
+    setStatusFilter,
+    sortField,
+    sortDirection,
+    toggleSort,
+    selectedMonth,
+    setSelectedMonth,
+    filteredPayments,
+  } = usePaymentFilters(payments)
+
+  const handleMarkPaid = async (id: string, tenantName: string, roomNumber: string) => {
+    // Optimistic UI Update
+    setPayments((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, status: "paid" as const, paidDate: new Date().toISOString().split("T")[0] }
+          : p
       )
+    )
+
+    // Update selected payment in drawer if open
+    if (selectedPayment?.id === id) {
+      setSelectedPayment((prev) =>
+        prev ? { ...prev, status: "paid" as const, paidDate: new Date().toISOString().split("T")[0] } : null
+      )
+    }
+
+    addToast("success", `${tenantName} (Room ${roomNumber}) marked as paid.`)
+
+    try {
+      const res = await fetch(`/api/payments/${id}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" }),
+      })
+      if (!res.ok) throw new Error(await res.text())
     } catch (err: any) {
       console.error("Failed to update status in Supabase:", err)
-      alert("Failed to mark payment as paid: " + err.message)
+      addToast("error", "Failed to update payment status on server.")
+      fetchPayments() // revert optimistic update
     }
   }
 
-  const totalCollected = payments
+  const handleApprovePayment = async (id: string, tenantName: string, roomNumber: string) => {
+    // Optimistic update
+    const paidDate = new Date().toISOString().split("T")[0]
+    setPayments((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: "paid" as const, paidDate } : p))
+    )
+    if (selectedPayment?.id === id) {
+      setSelectedPayment((prev) => prev ? { ...prev, status: "paid" as const, paidDate } : null)
+    }
+    addToast("success", `${tenantName} (Room ${roomNumber}) payment approved.`)
+
+    try {
+      const res = await fetch(`/api/payments/${id}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+    } catch (err: any) {
+      console.error("Failed to approve payment:", err)
+      addToast("error", "Failed to approve payment on server.")
+      fetchPayments() // revert optimistic update
+    }
+  }
+
+  const handleRejectPayment = async (id: string, tenantName: string, roomNumber: string, notes: string) => {
+    // Optimistic update back to pending
+    setPayments((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: "pending" as const, verification_notes: notes } : p))
+    )
+    if (selectedPayment?.id === id) {
+      setSelectedPayment((prev) => prev ? { ...prev, status: "pending" as const, verification_notes: notes } : null)
+    }
+    addToast("warning", `${tenantName} (Room ${roomNumber}) payment rejected.`)
+
+    try {
+      const res = await fetch(`/api/payments/${id}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", notes }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+    } catch (err: any) {
+      console.error("Failed to reject payment:", err)
+      addToast("error", "Failed to reject payment on server.")
+      fetchPayments() // revert optimistic update
+    }
+  }
+
+  const handleRowClick = (payment: Payment) => {
+    setSelectedPayment(payment)
+    setIsDrawerOpen(true)
+  }
+
+  // Calculate totals based on the currently selected month
+  const paymentsForSelectedMonth = useMemo(() => {
+    return payments.filter((p) => `${p.month} ${p.year}` === selectedMonth)
+  }, [payments, selectedMonth])
+
+  const totalCollected = paymentsForSelectedMonth
     .filter((p) => p.status === "paid")
     .reduce((sum, p) => sum + p.amount, 0)
-  const totalPending = payments
+  const totalPending = paymentsForSelectedMonth
     .filter((p) => p.status === "pending")
     .reduce((sum, p) => sum + p.amount, 0)
-  const totalLate = payments
+  const totalLate = paymentsForSelectedMonth
     .filter((p) => p.status === "late")
     .reduce((sum, p) => sum + p.amount, 0)
 
-  const getStatusBadge = (status: Payment["status"]) => {
-    const styles = {
-      paid: "border-success/30 bg-success/10 text-success",
-      pending: "border-warning/30 bg-warning/10 text-warning",
-      late: "border-destructive/30 bg-destructive/10 text-destructive",
-    }
-    return (
-      <Badge variant="outline" className={cn("font-medium", styles[status])}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    )
+  const totalSubmitted = paymentsForSelectedMonth
+    .filter((p) => p.status === "submitted")
+    .reduce((sum, p) => sum + p.amount, 0)
+
+  const hasActiveFilters = searchValue !== "" || statusFilter !== "all"
+
+  const handleClearFilters = () => {
+    setSearchValue("")
+    setStatusFilter("all")
   }
 
-  if (isLoading) {
+  // ─── Mobile Layout ────────────────────────────────────────────────────────
+  if (isMobile) {
     return (
-      <DashboardLayout title="Payments">
-        <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading payments...</p>
+      <DashboardLayout title={`Payments · ${selectedMonth.split(" ")[0]}`}>
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* Sticky header block */}
+          <div
+            className="sticky top-0 z-20 flex flex-col bg-[#0a0a0a] px-4 pt-3 pb-2 border-b border-[rgba(255,255,255,0.06)]"
+            style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}
+          >
+            {/* Page title */}
+            <h1 className="text-lg font-bold mb-3 leading-none">
+              Payments <span className="text-muted-foreground font-normal text-sm">· {selectedMonth}</span>
+            </h1>
+
+            {/* Compact summary cards */}
+            <MobileSummaryCards
+              totalCollected={totalCollected}
+              totalPending={totalPending}
+              totalLate={totalLate}
+              totalSubmitted={totalSubmitted}
+            />
+
+            {/* Compact filter bar */}
+            <MobileFilterBar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+              statusFilter={statusFilter}
+              onStatusChange={setStatusFilter}
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onToggleSort={toggleSort}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+            />
+
+            {/* List section header */}
+            {!isLoading && filteredPayments.length > 0 && (
+              <div className="flex justify-between text-[11px] text-muted-foreground pt-1 pb-0.5">
+                <span>{filteredPayments.length} payment{filteredPayments.length !== 1 ? "s" : ""}</span>
+                <span>{filteredPayments.filter(p => p.status === "paid").length} paid</span>
+              </div>
+            )}
+          </div>
+
+          {/* Scrollable payment list */}
+          <div className="flex-1 overflow-hidden px-4 pt-2">
+            <MobilePaymentList
+              payments={filteredPayments}
+              isLoading={isLoading}
+              totalPayments={paymentsForSelectedMonth.length}
+              onCardClick={handleRowClick}
+              onMarkPaid={handleMarkPaid}
+              onClearFilters={handleClearFilters}
+              hasActiveFilters={hasActiveFilters}
+              onRefresh={fetchPayments}
+              selectedMonth={selectedMonth}
+            />
+          </div>
         </div>
+
+        {/* Mobile bottom-sheet drawer */}
+        <MobilePaymentDrawer
+          payment={selectedPayment}
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          onMarkPaid={handleMarkPaid}
+          onApprovePayment={handleApprovePayment}
+          onRejectPayment={handleRejectPayment}
+        />
+
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
       </DashboardLayout>
     )
   }
 
+  // ─── Desktop Layout (unchanged) ───────────────────────────────────────────
   return (
-    <DashboardLayout title="Payments">
-      {/* Summary Cards */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <Card className="transition-shadow hover:shadow-md">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-success/10">
-              <IndianRupee className="h-6 w-6 text-success" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-muted-foreground">Collected</p>
-              <p className="truncate text-xl font-bold sm:text-2xl">
-                ₹{totalCollected.toLocaleString()}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="transition-shadow hover:shadow-md">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning/10">
-              <Clock className="h-6 w-6 text-warning" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-muted-foreground">Pending</p>
-              <p className="truncate text-xl font-bold sm:text-2xl">
-                ₹{totalPending.toLocaleString()}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="transition-shadow hover:shadow-md">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
-              <AlertTriangle className="h-6 w-6 text-destructive" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-muted-foreground">Late</p>
-              <p className="truncate text-xl font-bold sm:text-2xl">
-                ₹{totalLate.toLocaleString()}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <DashboardLayout title={`Payments · ${selectedMonth.split(" ")[0]}`}>
+      <div className="flex flex-col h-full max-w-7xl mx-auto w-full p-4 md:p-8 space-y-8">
+        <SummaryCards
+          totalCollected={totalCollected}
+          totalPending={totalPending}
+          totalLate={totalLate}
+          totalSubmitted={totalSubmitted}
+        />
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search payments..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-muted/50 pl-9 focus:bg-background"
+        <div>
+          <FilterBar
+            searchValue={searchValue}
+            onSearchChange={setSearchValue}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onToggleSort={toggleSort}
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+          />
+
+          <PaymentsTable
+            payments={filteredPayments}
+            isLoading={isLoading}
+            onRowClick={handleRowClick}
+            onMarkPaid={handleMarkPaid}
+            onClearFilters={handleClearFilters}
+            hasActiveFilters={hasActiveFilters}
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="late">Late</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Mobile Cards View */}
-      <div className="grid gap-4 md:hidden">
-        {filteredPayments.map((payment) => (
-          <Card key={payment.id} className="overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="truncate font-semibold">{payment.tenantName}</h3>
-                    {getStatusBadge(payment.status)}
-                  </div>
-                  <div className="mt-3 space-y-1.5 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Home className="h-4 w-4 shrink-0" />
-                      <span>Room {payment.roomNumber}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 shrink-0" />
-                      <span>
-                        Due:{" "}
-                        {new Date(payment.dueDate).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between border-t pt-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Amount</p>
-                      <p className="text-lg font-bold">₹{payment.amount.toLocaleString()}</p>
-                    </div>
-                    {payment.status !== "paid" ? (
-                      <Button
-                        size="sm"
-                        onClick={() => handleMarkPaid(payment.id)}
-                      >
-                        <Check className="mr-1.5 h-4 w-4" />
-                        Mark Paid
-                      </Button>
-                    ) : (
-                      <span className="text-sm font-medium text-success">Paid</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {filteredPayments.length === 0 && (
-          <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
-            No payments found.
-          </div>
-        )}
-      </div>
+      <PaymentDrawer
+        payment={selectedPayment}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onMarkPaid={handleMarkPaid}
+        onApprovePayment={handleApprovePayment}
+        onRejectPayment={handleRejectPayment}
+      />
 
-      {/* Desktop Table View */}
-      <Card className="hidden md:block">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="font-semibold">Tenant</TableHead>
-                <TableHead className="font-semibold">Room</TableHead>
-                <TableHead className="font-semibold">Amount</TableHead>
-                <TableHead className="font-semibold">Due Date</TableHead>
-                <TableHead className="font-semibold">Paid Date</TableHead>
-                <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="w-[120px] font-semibold">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPayments.map((payment) => (
-                <TableRow key={payment.id}>
-                  <TableCell className="font-medium">
-                    {payment.tenantName}
-                  </TableCell>
-                  <TableCell>{payment.roomNumber}</TableCell>
-                  <TableCell className="font-medium">₹{payment.amount.toLocaleString()}</TableCell>
-                  <TableCell>
-                    {new Date(payment.dueDate).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    {payment.paidDate
-                      ? new Date(payment.paidDate).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "-"}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                  <TableCell>
-                    {payment.status !== "paid" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkPaid(payment.id)}
-                        className="h-8"
-                      >
-                        <Check className="mr-1.5 h-3 w-3" />
-                        Mark Paid
-                      </Button>
-                    ) : (
-                      <span className="text-sm font-medium text-success">Paid</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredPayments.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground">
-              No payments found.
-            </div>
-          )}
-        </div>
-      </Card>
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </DashboardLayout>
   )
 }

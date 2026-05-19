@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,70 +9,123 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Building2, Bell, CreditCard, User, Shield, Save } from "lucide-react"
+import { Building2, Bell, CreditCard, User, Shield, Save, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 export default function SettingsPage() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const supabase = createClient()
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Payment Settings State
+  const [rentDueDay, setRentDueDay] = useState(1)
+  const [gracePeriodDays, setGracePeriodDays] = useState(3)
+  const [lateFee, setLateFee] = useState(0)
+  
+  // UPI Settings State
+  const [upiId, setUpiId] = useState("")
+  const [upiName, setUpiName] = useState("")
+  const [paymentInstructions, setPaymentInstructions] = useState("")
+  const [screenshotRequired, setScreenshotRequired] = useState(true)
+  const [utrRequired, setUtrRequired] = useState(true)
+
+  // Notification Settings State (Mocked for now as per original)
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [smsNotifications, setSmsNotifications] = useState(false)
   const [autoReminders, setAutoReminders] = useState(true)
 
+  const fetchSettings = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      setUserId(user.id)
+
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('owner_id', user.id)
+        .single()
+
+      if (error && error.code === 'PGRST116') {
+        // No settings found, auto-seed defaults
+        const { error: insertError } = await supabase
+          .from('settings')
+          .insert({ owner_id: user.id })
+        
+        if (!insertError) {
+          // Keep defaults
+          return
+        }
+      } else if (data) {
+        setRentDueDay(data.rent_due_day || 1)
+        setGracePeriodDays(data.grace_period_days || 3)
+        setLateFee(data.late_fee_per_day || 0)
+        setUpiId(data.upi_id || "")
+        setUpiName(data.upi_name || "")
+        setPaymentInstructions(data.payment_instructions || "")
+        setScreenshotRequired(data.screenshot_required ?? true)
+        setUtrRequired(data.utr_required ?? true)
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error)
+      toast.error("Failed to load settings")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchSettings()
+  }, [fetchSettings])
+
+  const handleSave = async () => {
+    if (!userId) return
+
+    try {
+      setIsSaving(true)
+      
+      const { error } = await supabase
+        .from('settings')
+        .update({
+          rent_due_day: rentDueDay,
+          grace_period_days: gracePeriodDays,
+          late_fee_per_day: lateFee,
+          upi_id: upiId,
+          upi_name: upiName,
+          payment_instructions: paymentInstructions,
+          screenshot_required: screenshotRequired,
+          utr_required: utrRequired
+        })
+        .eq('owner_id', userId)
+
+      if (error) throw error
+
+      toast.success("Settings saved successfully")
+    } catch (error) {
+      console.error("Error saving settings:", error)
+      toast.error("Failed to save settings")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Settings">
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout title="Settings">
       <div className="mx-auto max-w-4xl space-y-6">
-        {/* Property Details */}
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Property Details</CardTitle>
-                <CardDescription className="mt-0.5">
-                  Basic information about your PG property
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="propertyName" className="text-sm font-medium">Property Name</Label>
-                <Input id="propertyName" defaultValue="Sunshine PG" className="bg-muted/50 focus:bg-background" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ownerName" className="text-sm font-medium">Owner Name</Label>
-                <Input id="ownerName" defaultValue="Rajesh Kumar" className="bg-muted/50 focus:bg-background" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address" className="text-sm font-medium">Address</Label>
-              <Textarea
-                id="address"
-                defaultValue="123, MG Road, Koramangala, Bangalore - 560034"
-                className="resize-none bg-muted/50 focus:bg-background"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium">Contact Phone</Label>
-                <Input id="phone" defaultValue="+91 98765 43210" className="bg-muted/50 focus:bg-background" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Contact Email</Label>
-                <Input id="email" type="email" defaultValue="admin@sunshinepg.com" className="bg-muted/50 focus:bg-background" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Payment Settings */}
         <Card className="transition-shadow hover:shadow-md">
           <CardHeader className="pb-4">
@@ -83,65 +136,120 @@ export default function SettingsPage() {
               <div>
                 <CardTitle className="text-lg">Payment Settings</CardTitle>
                 <CardDescription className="mt-0.5">
-                  Configure default payment options
+                  Configure default payment options and UPI details for online payments
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="defaultDueDate" className="text-sm font-medium">Default Due Date</Label>
-                <Select defaultValue="5">
-                  <SelectTrigger id="defaultDueDate" className="bg-muted/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1st of every month</SelectItem>
-                    <SelectItem value="5">5th of every month</SelectItem>
-                    <SelectItem value="10">10th of every month</SelectItem>
-                    <SelectItem value="15">15th of every month</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="defaultDueDate" className="text-sm font-medium">Default Due Day</Label>
+                <Input 
+                  id="defaultDueDate" 
+                  type="number" 
+                  min="1" 
+                  max="31" 
+                  value={rentDueDay} 
+                  onChange={(e) => setRentDueDay(parseInt(e.target.value) || 1)} 
+                  className="bg-muted/50 focus:bg-background" 
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="lateFee" className="text-sm font-medium">Late Payment Fee (%)</Label>
-                <Input id="lateFee" type="number" defaultValue="5" className="bg-muted/50 focus:bg-background" onWheel={(e) => (e.target as HTMLElement).blur()} />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="gracePeriod" className="text-sm font-medium">Grace Period (days)</Label>
-                <Input id="gracePeriod" type="number" defaultValue="3" className="bg-muted/50 focus:bg-background" onWheel={(e) => (e.target as HTMLElement).blur()} />
+                <Input 
+                  id="gracePeriod" 
+                  type="number" 
+                  min="0"
+                  value={gracePeriodDays} 
+                  onChange={(e) => setGracePeriodDays(parseInt(e.target.value) || 0)} 
+                  className="bg-muted/50 focus:bg-background" 
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
-                <Select defaultValue="INR">
-                  <SelectTrigger id="currency" className="bg-muted/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="INR">INR (₹)</SelectItem>
-                    <SelectItem value="USD">USD ($)</SelectItem>
-                    <SelectItem value="EUR">EUR (€)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="lateFee" className="text-sm font-medium">Late Payment Fee</Label>
+                <Input 
+                  id="lateFee" 
+                  type="number" 
+                  min="0"
+                  value={lateFee} 
+                  onChange={(e) => setLateFee(parseInt(e.target.value) || 0)} 
+                  className="bg-muted/50 focus:bg-background" 
+                />
               </div>
             </div>
+            
             <Separator />
-            <div className="space-y-2">
-              <Label htmlFor="bankDetails" className="text-sm font-medium">Bank Account Details</Label>
-              <Textarea
-                id="bankDetails"
-                placeholder="Enter bank account details for payment reference"
-                defaultValue="Bank: HDFC Bank&#10;Account: 1234567890&#10;IFSC: HDFC0001234"
-                className="min-h-[100px] resize-none bg-muted/50 focus:bg-background"
-              />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">UPI Payment Details (For Public Links)</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="upiId" className="text-sm font-medium">UPI ID / VPA</Label>
+                  <Input 
+                    id="upiId" 
+                    placeholder="e.g., yourname@bank" 
+                    value={upiId} 
+                    onChange={(e) => setUpiId(e.target.value)} 
+                    className="bg-muted/50 focus:bg-background" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="upiName" className="text-sm font-medium">Payee Name</Label>
+                  <Input 
+                    id="upiName" 
+                    placeholder="e.g., Rajesh Kumar" 
+                    value={upiName} 
+                    onChange={(e) => setUpiName(e.target.value)} 
+                    className="bg-muted/50 focus:bg-background" 
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="paymentInstructions" className="text-sm font-medium">Payment Instructions</Label>
+                <Textarea
+                  id="paymentInstructions"
+                  placeholder="Any special instructions for the tenant when paying..."
+                  value={paymentInstructions}
+                  onChange={(e) => setPaymentInstructions(e.target.value)}
+                  className="min-h-[80px] resize-none bg-muted/50 focus:bg-background"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Verification Requirements</h3>
+              <div className="flex items-center justify-between py-2">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Require Payment Screenshot</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Tenants must upload a screenshot of the payment receipt
+                  </p>
+                </div>
+                <Switch
+                  checked={screenshotRequired}
+                  onCheckedChange={setScreenshotRequired}
+                />
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Require UTR/Reference Number</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Tenants must provide the transaction reference number
+                  </p>
+                </div>
+                <Switch
+                  checked={utrRequired}
+                  onCheckedChange={setUtrRequired}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Notification Settings */}
+        {/* Notification Settings (Mocked) */}
         <Card className="transition-shadow hover:shadow-md">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
@@ -195,113 +303,14 @@ export default function SettingsPage() {
                 onCheckedChange={setAutoReminders}
               />
             </div>
-            {autoReminders && (
-              <div className="ml-0 mt-2 space-y-3 rounded-lg border bg-muted/30 p-4 sm:ml-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="reminderDays" className="text-sm font-medium">Days before due date</Label>
-                    <Input id="reminderDays" type="number" defaultValue="3" className="bg-background" onWheel={(e) => (e.target as HTMLElement).blur()} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="reminderTime" className="text-sm font-medium">Reminder time</Label>
-                    <Input id="reminderTime" type="time" defaultValue="09:00" className="bg-background" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Account Settings */}
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                <User className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Account</CardTitle>
-                <CardDescription className="mt-0.5">
-                  Manage your account settings
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium">Username</Label>
-                <Input id="username" defaultValue="admin" className="bg-muted/50 focus:bg-background" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminEmail" className="text-sm font-medium">Email</Label>
-                <Input id="adminEmail" type="email" defaultValue="admin@pgmanager.com" className="bg-muted/50 focus:bg-background" />
-              </div>
-            </div>
-            <Separator />
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Change Password</Label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input type="password" placeholder="Current password" className="bg-muted/50 focus:bg-background" />
-                <Input type="password" placeholder="New password" className="bg-muted/50 focus:bg-background" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Security */}
-        <Card className="transition-shadow hover:shadow-md">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                <Shield className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Security</CardTitle>
-                <CardDescription className="mt-0.5">
-                  Security and privacy settings
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Two-Factor Authentication</Label>
-                <p className="text-sm text-muted-foreground">
-                  Add an extra layer of security to your account
-                </p>
-              </div>
-              <Button variant="outline" className="w-full sm:w-auto">Enable</Button>
-            </div>
-            <Separator />
-            <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Session Timeout</Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically logout after inactivity
-                </p>
-              </div>
-              <Select defaultValue="30">
-                <SelectTrigger className="w-full bg-muted/50 sm:w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">15 minutes</SelectItem>
-                  <SelectItem value="30">30 minutes</SelectItem>
-                  <SelectItem value="60">1 hour</SelectItem>
-                  <SelectItem value="never">Never</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
         {/* Save Button */}
         <div className="flex flex-col gap-4 pb-6 sm:flex-row sm:justify-end">
-          <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
-          <Button size="lg" className="w-full sm:w-auto">
-            <Save className="mr-2 h-4 w-4" />
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => fetchSettings()} disabled={isSaving}>Cancel</Button>
+          <Button size="lg" className="w-full sm:w-auto" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Changes
           </Button>
         </div>
@@ -309,3 +318,4 @@ export default function SettingsPage() {
     </DashboardLayout>
   )
 }
+
