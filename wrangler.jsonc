@@ -1,9 +1,0 @@
-{
-  "name": "staytraq",
-  "main": ".open-next/worker.js",
-  "compatibility_date": "2026-05-16",
-  "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "directory": ".open-next/assets"
-  }
-}
