@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Staytraq Premium Brand Palette (Royal Blue and Slate Dark) -->
+    <color name="colorPrimary">#2A5CFF</color>
+    <color name="colorPrimaryDark">#0F172A</color>
+    <color name="colorAccent">#3B82F6</color>
+</resources>

@@ -945,25 +945,25 @@ export default function RoomsPage() {
                       ROOM INFORMATION
                     </div>
 
-                    <div className="grid gap-4 p-5 bg-white dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800/60 rounded-2xl shadow-sm">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 p-5 bg-white dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800/60 rounded-2xl shadow-sm">
                       {[
                         { label: "Room Number", value: selectedRoom.number, key: "number" as const, type: "text" },
                         { label: "Floor", value: selectedRoom.floor, key: "floorNo" as const, type: "select" },
                         { label: "Room Type", value: selectedRoom.type, key: "type" as const, type: "select", options: ["AC", "Non-AC"] },
-                        { label: "Capacity", value: selectedRoom.capacity, key: "capacity" as const, type: "number" },
-                        { label: "Monthly Rent (₹)", value: selectedRoom.rentAmount, key: "rentAmount" as const, type: "number" },
-                        { label: "Maintenance Fee (₹)", value: selectedRoom.maintenanceFee, key: "maintenanceFee" as const, type: "number" },
+                        { label: "Capacity", value: `${selectedRoom.capacity} Beds`, key: "capacity" as const, type: "number" },
+                        { label: "Monthly Rent", value: `₹${selectedRoom.rentAmount.toLocaleString()}`, key: "rentAmount" as const, type: "number" },
+                        { label: "Maintenance Fee", value: `₹${selectedRoom.maintenanceFee.toLocaleString()}`, key: "maintenanceFee" as const, type: "number" },
                       ].map((field) => (
-                        <div key={field.key} className="grid grid-cols-1 sm:grid-cols-5 items-start sm:items-center gap-2 sm:gap-4 py-1">
-                          <Label className="col-span-1 sm:col-span-2 text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">{field.label}</Label>
-                          <div className="col-span-1 sm:col-span-3">
+                        <div key={field.key} className="flex flex-col gap-1 py-1">
+                          <Label className="text-[10px] font-extrabold tracking-wider text-slate-400 dark:text-slate-500 uppercase">{field.label}</Label>
+                          <div className="w-full">
                             {isEditing ? (
                               field.key === "floorNo" ? (
                                 <Select 
                                   defaultValue={String(editForm.floorNo ?? selectedRoom.floorNo)}
                                   onValueChange={(val) => setEditForm(prev => ({ ...prev, floorNo: Number(val), floor: floorNoToLabel(Number(val)) }))}
                                 >
-                                  <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl transition-all focus:ring-2 focus:ring-primary/20">
+                                  <SelectTrigger className="h-9 text-xs bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl transition-all focus:ring-2 focus:ring-primary/20">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 shadow-xl">
@@ -977,7 +977,7 @@ export default function RoomsPage() {
                                   defaultValue={editForm[field.key] as string}
                                   onValueChange={(val) => setEditForm(prev => ({ ...prev, [field.key]: val }))}
                                 >
-                                  <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl transition-all focus:ring-2 focus:ring-primary/20">
+                                  <SelectTrigger className="h-9 text-xs bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl transition-all focus:ring-2 focus:ring-primary/20">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 shadow-xl">
@@ -988,15 +988,17 @@ export default function RoomsPage() {
                                 </Select>
                               ) : (
                                 <Input 
-                                  className="h-10 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl transition-all focus:ring-2 focus:ring-primary/20" 
+                                  className="h-9 text-xs bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl transition-all focus:ring-2 focus:ring-primary/20" 
                                   type={field.type}
-                                  value={(editForm[field.key] as any) || ""}
+                                  value={(editForm[field.key] as any) ?? ""}
                                   onChange={(e) => setEditForm(prev => ({ ...prev, [field.key]: field.type === "number" ? parseInt(e.target.value) : e.target.value }))}
                                   onWheel={(e) => (e.target as HTMLElement).blur()}
                                 />
                               )
                             ) : (
-                              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{field.value}{field.label.includes("Fee") ? " / Mo" : ""}</p>
+                              <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 tracking-wide">
+                                {field.value}
+                              </p>
                             )}
                           </div>
                         </div>

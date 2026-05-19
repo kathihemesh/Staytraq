@@ -1,0 +1,16 @@
+{
+  "appId": "com.staytraq.app",
+  "appName": "Staytraq",
+  "webDir": "public",
+  "server": {
+    "url": "https://staytraq.vercel.app/",
+    "cleartext": true,
+    "allowNavigation": [
+      "staytraq.vercel.app",
+      "*.vercel.app"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

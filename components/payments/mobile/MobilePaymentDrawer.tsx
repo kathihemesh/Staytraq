@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { X, Check, AlertTriangle, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Payment } from "../usePaymentFilters";
 import { StatusBadge } from "../StatusBadge";
 import { PaymentTimeline } from "../PaymentTimeline";
 import { VerificationPanel } from "../VerificationPanel";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 
 interface MobilePaymentDrawerProps {
   payment: Payment | null;
@@ -17,22 +23,6 @@ interface MobilePaymentDrawerProps {
   onApprovePayment: (id: string, tenantName: string, roomNumber: string) => void;
   onRejectPayment: (id: string, tenantName: string, roomNumber: string, notes: string) => void;
 }
-
-const SHEET_HEIGHT = "85vh";
-const DISMISS_VELOCITY = 400;
-const DISMISS_OFFSET = 120;
-
-const sheetTransition = {
-  type: "tween" as const,
-  duration: 0.32,
-  ease: [0.32, 0.72, 0, 1] as [number, number, number, number],
-};
-
-const backdropTransition = {
-  type: "tween" as const,
-  duration: 0.28,
-  ease: "easeOut" as const,
-};
 
 export function MobilePaymentDrawer({
   payment,
@@ -90,61 +80,36 @@ export function MobilePaymentDrawer({
     : [];
 
   return (
-    <AnimatePresence>
-      {isOpen && payment && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={backdropTransition}
-            onClick={onClose}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-          />
-
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={sheetTransition}
-            drag="y"
-            dragConstraints={{ top: 0 }}
-            dragElastic={{ top: 0, bottom: 0.18 }}
-            dragMomentum={false}
-            onDragEnd={(_, info) => {
-              if (info.offset.y > DISMISS_OFFSET || info.velocity.y > DISMISS_VELOCITY) {
-                onClose();
-              }
-            }}
-            style={{ height: SHEET_HEIGHT }}
-            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl border-t border-slate-200 dark:border-slate-800 bg-background shadow-2xl overflow-hidden"
-          >
-            <div className="flex justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing">
-              <div className="h-1 w-9 rounded-full bg-muted-foreground/30" />
-            </div>
-
-            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 px-5 py-3 shrink-0">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold">{payment.tenantName}</h2>
-                  <StatusBadge status={payment.status} />
+    <Drawer open={isOpen && payment !== null} onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="max-h-[85vh] h-[85vh] flex flex-col overflow-hidden border-t border-border bg-background shadow-2xl">
+        {payment && (
+          <>
+            <DrawerHeader className="px-5 py-3 border-b border-border text-left shrink-0">
+              <div className="flex items-start justify-between w-full">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <DrawerTitle className="text-base font-bold text-foreground">{payment.tenantName}</DrawerTitle>
+                    <StatusBadge status={payment.status} />
+                  </div>
+                  <DrawerDescription className="text-xs text-muted-foreground">
+                    Room {payment.roomNumber}
+                  </DrawerDescription>
                 </div>
-                <p className="text-xs text-muted-foreground">Room {payment.roomNumber}</p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-muted/50 text-muted-foreground -mr-1"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-muted/50 text-muted-foreground -mr-1"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+            </DrawerHeader>
 
             <div
               className="flex-1 overflow-y-auto px-5 py-4 space-y-5"
               style={{ WebkitOverflowScrolling: "touch" }}
             >
-              <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-border">
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">Total Amount</p>
                   <p className="text-2xl font-bold">₹{payment.amount.toLocaleString()}</p>
@@ -162,7 +127,7 @@ export function MobilePaymentDrawer({
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                   Breakdown
                 </h3>
-                <div className="space-y-2.5 bg-muted/20 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="space-y-2.5 bg-muted/20 p-3.5 rounded-xl border border-border">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground text-xs">Base Rent</span>
                     <span className="font-medium text-sm">₹{payment.baseRent.toLocaleString()}</span>
@@ -177,7 +142,7 @@ export function MobilePaymentDrawer({
                       </span>
                     </div>
                   )}
-                  <div className="border-t border-slate-200 dark:border-slate-800 pt-2 flex justify-between font-bold text-sm">
+                  <div className="border-t border-border pt-2 flex justify-between font-bold text-sm">
                     <span>Total</span>
                     <span>₹{payment.amount.toLocaleString()}</span>
                   </div>
@@ -186,7 +151,7 @@ export function MobilePaymentDrawer({
             </div>
 
             <div
-              className="shrink-0 flex flex-col gap-3 px-5 pt-3 pb-3 border-t border-slate-200 dark:border-slate-800 bg-background"
+              className="shrink-0 flex flex-col gap-3 px-5 pt-3 pb-3 border-t border-border bg-background"
               style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
             >
               {payment.status === "submitted" ? (
@@ -250,9 +215,9 @@ export function MobilePaymentDrawer({
                 </div>
               )}
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+          </>
+        )}
+      </DrawerContent>
+    </Drawer>
   );
 }
