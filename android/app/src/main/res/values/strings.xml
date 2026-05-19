@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Staytraq</string>
-    <string name="title_activity_main">Staytraq</string>
-    <string name="package_name">com.staytraq.app</string>
-    <string name="custom_url_scheme">com.staytraq.app</string>
-</resources>

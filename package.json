@@ -4,16 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "build:cf": "opennextjs-cloudflare build",
-    "deploy": "wrangler deploy"
+    "build": "next build"
   },
   "dependencies": {
-    "@capacitor/android": "^8.3.4",
-    "@capacitor/cli": "^8.3.4",
-    "@capacitor/core": "^8.3.4",
     "@hookform/resolvers": "^3.10.0",
-    "@opennextjs/cloudflare": "^1.19.11",
     "@radix-ui/react-accordion": "1.2.12",
     "@radix-ui/react-alert-dialog": "1.1.15",
     "@radix-ui/react-aspect-ratio": "1.1.8",
@@ -67,7 +61,6 @@
     "tailwind-merge": "^3.6.0",
     "twilio": "^6.0.2",
     "vaul": "^1.1.2",
-    "wrangler": "^4.93.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
