@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef, useEffect } from "react"
+import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import {
   MessageCircle,
   Send,
@@ -168,19 +168,29 @@ export default function RemindersPage() {
     paid: allTenants.filter((t) => t.status === "paid").length,
   }), [allTenants])
 
-  const toggleTenant = (id: number) => {
+  const toggleTenant = useCallback((id: number) => {
     setSelectedTenants((prev) => prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id])
-  }
+  }, [])
 
-  const selectAll = () => {
+  const selectAll = useCallback(() => {
     if (selectedTenants.length === filteredAndSortedTenants.length) {
       setSelectedTenants([])
     } else {
       setSelectedTenants(filteredAndSortedTenants.map((t) => t.id))
     }
-  }
+  }, [selectedTenants, filteredAndSortedTenants])
 
-  const sendReminders = async () => {
+  const getMessage = useCallback((tenant: ReminderTenant) => {
+    if (!tenant) return ""
+    const template = messageType === "custom" ? customMessage : messageTemplates[messageType]
+    return template
+      .replace("{name}", tenant.name.split(" ")[0])
+      .replace("{amount}", tenant.amount.toLocaleString())
+      .replace("{room}", tenant.room)
+      .replace("{dueDate}", tenant.dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" }))
+  }, [messageType, customMessage])
+
+  const sendReminders = useCallback(async () => {
     if (selectedTenants.length === 0) return
     setIsSending(true)
     try {
@@ -220,9 +230,9 @@ export default function RemindersPage() {
     } finally {
       setIsSending(false)
     }
-  }
+  }, [selectedTenants, allTenants, getMessage, messageType])
 
-  const insertToken = (token: string) => {
+  const insertToken = useCallback((token: string) => {
     if (!textareaRef.current) return
     const start = textareaRef.current.selectionStart
     const end = textareaRef.current.selectionEnd
@@ -233,21 +243,12 @@ export default function RemindersPage() {
       textareaRef.current?.focus()
       textareaRef.current?.setSelectionRange(start + token.length, start + token.length)
     }, 0)
-  }
-
-  const getMessage = (tenant: ReminderTenant) => {
-    const template = messageType === "custom" ? customMessage : messageTemplates[messageType]
-    return template
-      .replace("{name}", tenant.name.split(" ")[0])
-      .replace("{amount}", tenant.amount.toLocaleString())
-      .replace("{room}", tenant.room)
-      .replace("{dueDate}", tenant.dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" }))
-  }
+  }, [customMessage])
 
   const selectedTenantsData = allTenants.filter((t) => selectedTenants.includes(t.id))
   const isAnyFilterActive = filter !== "all" || floorFilter !== "all" || searchTerm !== "" || sortBy !== "urgency"
 
-  const composerContent = (
+  const composerContent = useMemo(() => (
     <div className="flex flex-col min-h-0 h-full bg-white dark:bg-slate-900 w-full">
       {/* Composer Header */}
       <div className="p-5 border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-md shrink-0">
@@ -393,7 +394,9 @@ export default function RemindersPage() {
           disabled={selectedTenants.length === 0}
           onClick={() => {
             sendReminders()
-            setIsMobileComposerOpen(false)
+            if (setIsMobileComposerOpen) {
+              setIsMobileComposerOpen(false)
+            }
           }}
         >
           {isSending ? (
@@ -402,7 +405,17 @@ export default function RemindersPage() {
         </Button>
       </div>
     </div>
-  )
+  ), [
+    selectedTenants,
+    selectedTenantsData,
+    messageType,
+    customMessage,
+    isSending,
+    insertToken,
+    getMessage,
+    sendReminders,
+    setIsMobileComposerOpen
+  ])
 
   if (!isMounted) return null
 
@@ -631,7 +644,6 @@ export default function RemindersPage() {
 
                     return (
                       <motion.div
-                        layout
                         initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                         animate={{ opacity: 1, height: "auto", marginBottom: 12 }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
@@ -724,7 +736,11 @@ export default function RemindersPage() {
         {/* Mobile Composer Sheet */}
         <Sheet open={isMobileComposerOpen} onOpenChange={setIsMobileComposerOpen}>
           <SheetContent side="bottom" className="h-[90vh] p-0 rounded-t-[2rem] bg-white dark:bg-slate-900 border-none overflow-hidden">
-            {composerContent}
+            <SheetTitle className="sr-only">Compose WhatsApp Reminder</SheetTitle>
+            <SheetDescription className="sr-only">
+              Select a message template and review the preview before sending.
+            </SheetDescription>
+            {isMobileComposerOpen && composerContent}
           </SheetContent>
         </Sheet>
 
