@@ -96,7 +96,7 @@ serve(async () => {
         const extraCharges = tenant.extra_charges || 0;
         const totalAmount = rentAmount + extraCharges;
 
-        const { error: insertErr } = await supabase
+        const { data: inserted, error: insertErr } = await supabase
           .from("payments")
           .insert({
             tenant_id: tenant.id,
@@ -108,13 +108,31 @@ serve(async () => {
             total_amount: totalAmount,
             due_date: targetDueDate.toISOString().split("T")[0],
             status: "pending"
-          });
+          })
+          .select("id")
+          .maybeSingle();
 
         if (insertErr) {
           console.error(`Failed to generate payment for ${tenant.name}:`, insertErr);
         } else {
           console.log(`Payment successfully generated for ${tenant.name}`);
           generatedCount++;
+
+          // Log audit trail entry
+          if (inserted?.id) {
+            const { error: auditErr } = await supabase
+              .from("payment_audit_log")
+              .insert({
+                payment_id: inserted.id,
+                owner_id: tenant.owner_id,
+                action: "generated",
+                notes: `Auto-generated for ${tenant.name} — due ${targetDueDate.toISOString().split("T")[0]}`,
+              });
+
+            if (auditErr) {
+              console.error(`Audit log failed for payment ${inserted.id}:`, auditErr);
+            }
+          }
         }
       }
     }

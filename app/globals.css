@@ -193,3 +193,82 @@ input[type=number] {
     background-position: 22.6px 22.6px;
   }
 }
+
+/* Toast Progress Animation */
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Custom Scrollbar for dark theme tables */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #333;
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes timeline-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.animate-timeline-pulse {
+  animation: timeline-pulse 1.5s infinite ease-out;
+}
+
+/* Hide scrollbar – used for mobile horizontal scroll rows */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile payments summary — smooth infinite marquee (duplicated row, translate -50%) */
+@keyframes payments-summary-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.payments-summary-marquee-track {
+  display: flex;
+  width: max-content;
+  gap: 0.625rem;
+  animation: payments-summary-marquee 24s linear infinite;
+  will-change: transform;
+}
+.payments-summary-marquee-track.is-paused {
+  animation-play-state: paused;
+}
+
+/* Skeleton pulse for mobile payment card skeletons */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.skeleton-pulse {
+  animation: skeleton-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

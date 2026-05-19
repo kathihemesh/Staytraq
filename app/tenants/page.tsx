@@ -70,8 +70,11 @@ interface PaymentHistory {
   month: string
   rent: number
   extraCharges: number
-  status: PaymentStatus
+  status: PaymentStatus | "submitted"
   paidDate?: string
+  screenshot_url?: string
+  utr_number?: string
+  verification_notes?: string
 }
 
 interface IdDocument {
@@ -207,7 +210,8 @@ function TenantsPageContent() {
         .from("tenants_table")
         .select(`
           *,
-          rooms_table (room_number, rent_amount)
+          rooms_table (room_number, rent_amount),
+          payments (id, month, year, rent_amount, extra_charges, status, paid_at, screenshot_path, utr_number, verification_notes)
         `)
         .eq("owner_id", user.id)
         
@@ -228,6 +232,27 @@ function TenantsPageContent() {
         notes: t.notes || "",
         status: t.status,
         id_documents: t.id_documents || [],
+        paymentHistory: (t.payments || [])
+          .sort((a: any, b: any) => {
+            if (a.year !== b.year) return (b.year || 0) - (a.year || 0)
+            return (b.month || 0) - (a.month || 0)
+          })
+          .map((p: any) => {
+            const monthName = typeof p.month === 'number' || !isNaN(Number(p.month)) 
+              ? new Date(2000, Number(p.month) - 1).toLocaleString('en-US', { month: 'long' }) 
+              : p.month;
+            return {
+              id: String(p.id),
+              month: `${monthName} ${p.year || ''}`.trim(),
+              rent: Number(p.rent_amount) || 0,
+              extraCharges: Number(p.extra_charges) || 0,
+              status: (p.status || "pending") as PaymentStatus | "submitted",
+              paidDate: p.paid_at ? p.paid_at.split('T')[0] : undefined,
+              screenshot_url: p.screenshot_path,
+              utr_number: p.utr_number,
+              verification_notes: p.verification_notes
+            };
+          })
       }))
       
       setTenants(formattedTenants)
@@ -587,14 +612,15 @@ function TenantsPageContent() {
     return <Badge variant="outline" className={cn("font-medium", className)}>{label}</Badge>
   }
 
-  const getPaymentStatusBadge = (status: PaymentStatus) => {
+  const getPaymentStatusBadge = (status: PaymentStatus | "submitted") => {
     const styles = {
       paid: "border-success/30 bg-success/10 text-success",
       pending: "border-warning/30 bg-warning/10 text-warning",
       late: "border-destructive/30 bg-destructive/10 text-destructive",
+      submitted: "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
     }
     return (
-      <Badge variant="outline" className={cn("font-medium text-[10px]", styles[status])}>
+      <Badge variant="outline" className={cn("font-medium text-[10px]", styles[status] || styles.pending)}>
         {status.toUpperCase()}
       </Badge>
     )
@@ -1168,12 +1194,13 @@ function TenantsPageContent() {
                               <TableHead>Amount</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead>Date Paid</TableHead>
+                              <TableHead>Proof</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {(activeTenant.paymentHistory || []).length === 0 ? (
                                <TableRow>
-                                 <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                                 <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                                    No payment history available.
                                  </TableCell>
                                </TableRow>
@@ -1184,6 +1211,28 @@ function TenantsPageContent() {
                                   <TableCell>₹{(ph.rent + ph.extraCharges).toLocaleString()}</TableCell>
                                   <TableCell>{getPaymentStatusBadge(ph.status)}</TableCell>
                                   <TableCell className="text-muted-foreground">{ph.paidDate || "-"}</TableCell>
+                                  <TableCell>
+                                    {ph.screenshot_url ? (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="h-8 text-xs text-primary"
+                                        onClick={async () => {
+                                          const { data, error } = await supabase.storage.from('staytraq_docs').createSignedUrl(ph.screenshot_url!, 60)
+                                          if (data?.signedUrl) {
+                                            setPreviewImageUrl(data.signedUrl)
+                                            setPreviewImageTitle(`Payment Proof - ${ph.month}`)
+                                          } else {
+                                            toast({ title: "Error", description: "Could not fetch image.", variant: "destructive" })
+                                          }
+                                        }}
+                                      >
+                                        <FileText className="h-3 w-3 mr-1" /> View
+                                      </Button>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">-</span>
+                                    )}
+                                  </TableCell>
                                 </TableRow>
                               ))
                             )}
